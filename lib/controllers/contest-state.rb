@@ -29,7 +29,7 @@ module Themis
                     Themis::Controllers::ScoreboardState::enable
 
                     Themis::Models::DB.after_commit do
-                        stream_config_filename = File.join Dir.pwd, 'stream', 'config.json'
+                        stream_config_filename = File.join Dir.pwd, '..', 'stream', 'config.json'
                         data = Themis::Configuration::get_stream_config
                         IO.write stream_config_filename, JSON.pretty_generate(data)
                     end
