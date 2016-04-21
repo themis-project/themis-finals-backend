@@ -298,7 +298,7 @@ module Themis
                 team = Themis::Models::Team[team_id]
                 halt 404 if team.nil?
 
-                filename = File.join Dir.pwd, 'pictures', "#{team.alias}.png"
+                filename = File.join ENV['TEAM_LOGOS_DIR'], "#{team.alias}.png"
                 unless File.exists? filename
                     filename = File.join Dir.pwd, 'pictures', '__default.png'
                 end
