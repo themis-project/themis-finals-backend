@@ -247,8 +247,8 @@ module Themis
                         {
                             id: total_score.id,
                             team_id: total_score.team_id,
-                            defence_points: total_score.defence_points.to_f,
-                            attack_points: total_score.attack_points.to_f
+                            defence_points: total_score.defence_points.to_f.round(4),
+                            attack_points: total_score.attack_points.to_f.round(4)
                         }
                     end
                 else

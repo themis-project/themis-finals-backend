@@ -209,14 +209,14 @@ module Themis
                     data = {
                         id: total_score.id,
                         team_id: total_score.team_id,
-                        defence_points: total_score.defence_points.to_f,
-                        attack_points: total_score.attack_points.to_f
+                        defence_points: total_score.defence_points.to_f.round(4),
+                        attack_points: total_score.attack_points.to_f.round(4)
                     }
 
                     Themis::Utils::EventEmitter.emit 'team/score', data, true, scoreboard_enabled, scoreboard_enabled
 
                     Themis::Models::DB.after_commit do
-                        @logger.info "Total score of team `#{team.name}` has been recalculated: defence - #{defence_points.to_f} pts, attack - #{attack_points.to_f} pts!"
+                        @logger.info "Total score of team `#{team.name}` has been recalculated: defence - #{defence_points.to_f.round(4)} pts, attack - #{attack_points.to_f.round(4)} pts!"
                     end
                 end
             end
