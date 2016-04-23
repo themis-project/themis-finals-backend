@@ -1,3 +1,6 @@
+require 'dotenv'
+Dotenv.load
+
 namespace :db do
     desc 'Clear database'
     task :reset do
