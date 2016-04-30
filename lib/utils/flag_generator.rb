@@ -6,12 +6,12 @@ module Themis
     module Utils
         module FlagGenerator
             def self.get_flag
-                seed = SecureRandom.hex 10
                 source = Digest::MD5.new
-                source << SecureRandom.hex(32)
+                source << SecureRandom.random_bytes(32)
                 source << Themis::Configuration::get_contest_flow.generator_secret
                 flag = "#{source.hexdigest}="
-                return seed, flag
+                adjunct = SecureRandom.random_bytes 10
+                return flag, adjunct
             end
         end
     end

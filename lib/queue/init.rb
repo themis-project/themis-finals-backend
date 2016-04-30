@@ -66,7 +66,7 @@ module Themis
                             if flag.nil?
                                 @logger.error "Failed to find flag #{job_data['flag']}!"
                             else
-                                Themis::Controllers::Contest::handle_push flag, job_data['status'], job_data['flag_id']
+                                Themis::Controllers::Contest::handle_push flag, job_data['status'], job_data['adjunct']
                             end
                         when 'pull'
                             poll = Themis::Models::FlagPoll.first(:id => job_data['request_id'])

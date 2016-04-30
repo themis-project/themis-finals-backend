@@ -11,6 +11,7 @@ require './lib/controllers/scoreboard-state'
 require './lib/constants/flag-poll-state'
 require './lib/constants/team-service-state'
 require './lib/controllers/ctftime'
+require 'base64'
 
 
 module Themis
@@ -26,14 +27,21 @@ module Themis
                 flag = nil
                 Themis::Models::DB.transaction(:retry_on => [::Sequel::UniqueConstraintViolation], :num_retries => nil) do
                     flag = Themis::Controllers::Flag::issue team, service, round
+                    round_number = Themis::Models::Round.where('id <= ?', round.id).count
 
                     Themis::Models::DB.after_commit do
                         @logger.info "Pushing flag `#{flag.flag}` to service `#{service.name}` of `#{team.name}` ..."
                         job_data = {
                             operation: 'push',
                             endpoint: team.host,
-                            flag_id: flag.seed,
-                            flag: flag.flag
+                            flag: flag.flag,
+                            adjunct: Base64.encode64(flag.adjunct),
+                            metadata: {
+                                timestamp: DateTime.now.to_s,
+                                round: round_number,
+                                team_name: team.name,
+                                service_name: service.name
+                            }
                         }.to_json
                         Themis::Utils::Queue::enqueue "themis.service.#{service.alias}.listen", job_data
                     end
@@ -56,13 +64,13 @@ module Themis
                 end
             end
 
-            def self.handle_push(flag, status, seed)
+            def self.handle_push(flag, status, adjunct)
                 Themis::Models::DB.transaction(:retry_on => [::Sequel::UniqueConstraintViolation], :num_retries => nil) do
                     if status == Themis::Checker::Result::UP
                         flag.pushed_at = DateTime.now
                         expires = Time.now + Themis::Configuration.get_contest_flow.flag_lifetime
                         flag.expired_at = expires.to_datetime
-                        flag.seed = seed
+                        flag.adjunct = Base64.decode64(adjunct)
                         flag.save
                         @logger.info "Successfully pushed flag `#{flag.flag}`!"
 
@@ -78,6 +86,7 @@ module Themis
             def self.poll_flag(flag)
                 team = flag.team
                 service = flag.service
+                round = flag.round
                 poll = nil
 
                 Themis::Models::DB.transaction do
@@ -88,6 +97,8 @@ module Themis
                         :flag_id => flag.id
                     )
 
+                    round_number = Themis::Models::Round.where('id <= ?', round.id).count
+
                     Themis::Models::DB.after_commit do
                         @logger.info "Polling flag `#{flag.flag}` from service `#{service.name}` of `#{team.name}` ..."
                         job_data = {
@@ -95,7 +106,13 @@ module Themis
                             request_id: poll.id,
                             endpoint: team.host,
                             flag: flag.flag,
-                            flag_id: flag.seed
+                            adjunct: Base64.encode64(flag.adjunct),
+                            metadata: {
+                                timestamp: DateTime.now.to_s,
+                                round: round_number,
+                                team_name: team.name,
+                                service_name: service.name
+                            }
                         }.to_json
                         Themis::Utils::Queue::enqueue "themis.service.#{service.alias}.listen", job_data
                     end

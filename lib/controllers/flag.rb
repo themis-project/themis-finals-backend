@@ -11,14 +11,14 @@ module Themis
                 flag = nil
 
                 Themis::Models::DB.transaction do
-                    seed, str = Themis::Utils::FlagGenerator::get_flag
+                    str, adjunct = Themis::Utils::FlagGenerator::get_flag
                     flag = Themis::Models::Flag.create(
                         :flag => str,
                         :created_at => DateTime.now,
                         :pushed_at => nil,
                         :expired_at => nil,
                         :considered_at => nil,
-                        :seed => seed,
+                        :adjunct => adjunct,
                         :service_id => service.id,
                         :team_id => team.id,
                         :round_id => round.id
