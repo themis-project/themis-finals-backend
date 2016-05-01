@@ -3,24 +3,6 @@ require './lib/configuration/init'
 
 module Themis
     module Configuration
-        postgres_connection do
-            hostname '127.0.0.1'
-            port 5432
-            username 'themis_finals_user'
-            passwd 'sometrickypassword'
-            dbname 'themis-finals'
-        end
-
-        beanstalk_connection do
-            host '127.0.0.1'
-            port 11300
-        end
-
-        redis_connection do
-            host '127.0.0.1'
-            port 6379
-        end
-
         network do
             internal '172.20.0.0/24'  # internal network (for contest organizers)
             other '172.20.100.0/24'  # other network (for visualization system)

@@ -35,8 +35,10 @@ module Themis
             protected
             def ensure_connection
                 return unless @_client.nil?
-                opts = Themis::Configuration::get_redis_options
-                @_client = Redis.new **opts
+                host = ENV['REDIS_HOST'] || '127.0.0.1'
+                port = ENV['REDIS_PORT'].to_i || 6379
+                db = ENV['REDIS_DB'].to_i || 0
+                @_client = Redis.new :host => host, :port => port, :db => db
             end
         end
     end

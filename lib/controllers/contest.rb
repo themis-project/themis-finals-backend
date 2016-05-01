@@ -43,7 +43,7 @@ module Themis
                                 service_name: service.name
                             }
                         }.to_json
-                        Themis::Utils::Queue::enqueue "themis.service.#{service.alias}.listen", job_data
+                        Themis::Utils::Queue::enqueue "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service.#{service.alias}.listen", job_data
                     end
                 end
             end
@@ -114,7 +114,7 @@ module Themis
                                 service_name: service.name
                             }
                         }.to_json
-                        Themis::Utils::Queue::enqueue "themis.service.#{service.alias}.listen", job_data
+                        Themis::Utils::Queue::enqueue "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service.#{service.alias}.listen", job_data
                     end
                 end
             end

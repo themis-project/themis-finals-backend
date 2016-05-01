@@ -8,9 +8,16 @@ namespace :db do
         require './config'
         require 'sequel'
 
-        postgres_uri = Themis::Configuration::get_postgres_uri
+        connection_params = {
+            :adapter => 'postgres',
+            :host => ENV['PG_HOST'],
+            :port => ENV['PG_PORT'].to_i,
+            :user => ENV['PG_USERNAME'],
+            :password => ENV['PG_PASSWORD'],
+            :database => ENV['PG_DATABASE']
+        }
 
-        Sequel.connect(postgres_uri) do |db|
+        Sequel.connect(connection_params) do |db|
             tables = [
                 'server_sent_events',
                 'contest_states',
@@ -37,7 +44,7 @@ namespace :db do
         Sequel.extension :migration
         Sequel.extension :pg_json
 
-        Sequel.connect(postgres_uri) do |db|
+        Sequel.connect(connection_params) do |db|
             Sequel::Migrator.run(db, 'migrations')
         end
     end
