@@ -66,8 +66,8 @@ module Themis
 
                 total_scores = []
                 scores.each do |score|
-                    attackRelative = (max_attack < 0.001) ? 0 : score[:attack_score] / max_attack
-                    defenceRelative = (max_defence < 0.001) ? 0 : score[:defence_score] / max_defence
+                    attackRelative = (max_attack < 0.00001) ? 0 : score[:attack_score] / max_attack
+                    defenceRelative = (max_defence < 0.00001) ? 0 : score[:defence_score] / max_defence
                     total_scores << {
                         name: score[:name],
                         total_score: 0.5 * (attackRelative + defenceRelative),
@@ -82,7 +82,7 @@ module Themis
                     standings << {
                         pos: ndx + 1,
                         team: total_score[:name],
-                        score: total_score[:total_score].to_f
+                        score: total_score[:total_score].to_f.round(4)
                     }
                 end
 

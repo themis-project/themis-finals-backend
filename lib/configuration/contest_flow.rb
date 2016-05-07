@@ -1,3 +1,5 @@
+require 'base64'
+
 module Themis
     module Configuration
         def self.contest_flow(&block)
@@ -61,7 +63,7 @@ module Themis
             end
 
             def generator_secret(generator_secret)
-                @contest_flow.generator_secret = generator_secret
+                @contest_flow.generator_secret = Base64.decode64(generator_secret)
             end
         end
 

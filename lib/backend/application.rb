@@ -247,8 +247,8 @@ module Themis
                         {
                             id: total_score.id,
                             team_id: total_score.team_id,
-                            defence_points: total_score.defence_points.to_f,
-                            attack_points: total_score.attack_points.to_f
+                            defence_points: total_score.defence_points.to_f.round(4),
+                            attack_points: total_score.attack_points.to_f.round(4)
                         }
                     end
                 else
@@ -298,7 +298,7 @@ module Themis
                 team = Themis::Models::Team[team_id]
                 halt 404 if team.nil?
 
-                filename = File.join Dir.pwd, 'pictures', "#{team.alias}.png"
+                filename = File.join ENV['TEAM_LOGOS_DIR'], "#{team.alias}.png"
                 unless File.exists? filename
                     filename = File.join Dir.pwd, 'pictures', '__default.png'
                 end

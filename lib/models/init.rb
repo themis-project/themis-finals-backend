@@ -2,7 +2,16 @@ module Themis
     module Models
         require 'sequel'
 
-        DB = Sequel.connect(Themis::Configuration::get_postgres_uri)
+        connection_params = {
+            :adapter => 'postgres',
+            :host => ENV['PG_HOST'],
+            :port => ENV['PG_PORT'].to_i,
+            :user => ENV['PG_USERNAME'],
+            :password => ENV['PG_PASSWORD'],
+            :database => ENV['PG_DATABASE']
+        }
+
+        DB = Sequel.connect(connection_params)
         DB.extension :pg_json
 
         require './lib/models/team'

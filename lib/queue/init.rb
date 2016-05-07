@@ -9,12 +9,12 @@ module Themis
         @logger = Themis::Utils::Logger::get
 
         def self.run
-            beanstalk = Beaneater.new Themis::Configuration::get_beanstalk_uri
+            beanstalk = Beaneater.new ENV['BEANSTALKD_URI']
             @logger.info 'Connected to beanstalk server'
 
-            tubes_namespace = 'themis'
+            tube_namespace = ENV['BEANSTALKD_TUBE_NAMESPACE']
 
-            beanstalk.jobs.register "#{tubes_namespace}.main" do |job|
+            beanstalk.jobs.register "#{tube_namespace}.main" do |job|
                 begin
                     case job.body
                     when 'push'
@@ -57,7 +57,7 @@ module Themis
             end
 
             Themis::Models::Service.all.each do |service|
-                beanstalk.jobs.register "#{tubes_namespace}.service.#{service.alias}.report" do |job|
+                beanstalk.jobs.register "#{tube_namespace}.service.#{service.alias}.report" do |job|
                     begin
                         job_data = JSON.parse job.body
                         case job_data['operation']
@@ -66,7 +66,7 @@ module Themis
                             if flag.nil?
                                 @logger.error "Failed to find flag #{job_data['flag']}!"
                             else
-                                Themis::Controllers::Contest::handle_push flag, job_data['status'], job_data['flag_id']
+                                Themis::Controllers::Contest::handle_push flag, job_data['status'], job_data['adjunct']
                             end
                         when 'pull'
                             poll = Themis::Models::FlagPoll.first(:id => job_data['request_id'])

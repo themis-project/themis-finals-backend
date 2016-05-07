@@ -3,27 +3,9 @@ require './lib/configuration/init'
 
 module Themis
     module Configuration
-        postgres_connection do
-            hostname '127.0.0.1'
-            port 5432
-            username 'postgres'
-            passwd '100cf32c205cbe9f41af3c738d12a4ee'
-            dbname 'themis'
-        end
-
-        beanstalk_connection do
-            host '127.0.0.1'
-            port 11300
-        end
-
-        redis_connection do
-            host '127.0.0.1'
-            port 6379
-        end
-
         network do
-            internal '10.0.0.0/24'  # internal network (for contest organizers)
-            other '10.0.21.0/24', '10.0.22.0/24'  # other network (for visualization system)
+            internal '172.20.0.0/24'  # internal network (for contest organizers)
+            other '172.20.100.0/24'  # other network (for visualization system)
         end
 
         contest_flow do
@@ -33,25 +15,25 @@ module Themis
             poll_count 2  # poll 2 flags at once
             update_period 60  # update scores every 60 seconds
             attack_limits 200, 60  # max 200 attack attempts for the last 60 seconds
-            generator_secret 'hell-yeah'  # an IV for flag generator
+            generator_secret 'Yj9W6vWzGS2pgifUeLz60+gKokzw9wzchUq7/70f664yIkv47YQpeUO0TZV6F57yMAvrkc7KBJ4CJul/tnO1IA=='  # an IV for flag generator
         end
 
         team 'team_1' do  # this is an internal alias
             name 'Team #1'  # team displayed name
-            network '10.0.1.0/24'  # team network
-            host '10.0.1.3'  # game box address
+            network '172.20.1.0/24'  # team network
+            host '172.20.1.2'  # game box address
         end
 
         team 'team_2' do
             name 'Team #2'
-            network '10.0.2.0/24'
-            host '10.0.2.3'
+            network '172.20.2.0/24'
+            host '172.20.2.2'
         end
 
         team 'team_3' do
             name 'Team #3'
-            network '10.0.3.0/24'
-            host '10.0.3.3'
+            network '172.20.3.0/24'
+            host '172.20.3.2'
         end
         # and so on for teams
 

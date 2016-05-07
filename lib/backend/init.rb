@@ -10,7 +10,8 @@ module Themis
 
         def self.run
             EM.run do
-                Thin::Server.start Application, ENV['LISTEN'], ENV['PORT'].to_i
+                port = ENV['PORT_RANGE_START'].to_i + ENV['APP_INSTANCE'].to_i
+                Thin::Server.start Application, ENV['HOST'], port
 
                 Signal.trap 'INT' do
                     EM.stop
