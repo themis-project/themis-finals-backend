@@ -198,10 +198,13 @@ module Themis
             end
 
             def self.control_complete
+                contest_state = Themis::Models::ContestState.last
+                return unless contest_state.is_await_complete
+
                 living_flags_count = Themis::Models::Flag.count_living
                 expired_flags_count = Themis::Models::Flag.count_expired
 
-                if living_flags_count == 0 and expired_flags_count == 0
+                if living_flags_count == 0 && expired_flags_count == 0
                     Themis::Models::DB.transaction do
                         Themis::Controllers::ContestState::complete
                         Themis::Controllers::Round::end_last
@@ -304,6 +307,8 @@ module Themis
                 if scoreboard_enabled and ENV['CTFTIME_SCOREBOARD'] == 'true'
                     Themis::Controllers::CTFTime::post_scoreboard
                 end
+
+                control_complete
             end
 
             def self.update_team_service_state(team, service, status)

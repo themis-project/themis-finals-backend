@@ -43,11 +43,6 @@ module Themis
                                 @logger.error "#{e}"
                             end
                         end
-                    when 'control_complete'
-                        contest_state = Themis::Models::ContestState.last
-                        if not contest_state.nil? and contest_state.is_await_complete
-                            Themis::Controllers::Contest::control_complete
-                        end
                     else
                         @logger.warn "Unknown job #{job.body}"
                     end
