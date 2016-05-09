@@ -72,6 +72,22 @@ def change_contest_state(command)
     end
 end
 
+def estimate_completion
+    require './config'
+    require './lib/models/init'
+
+    Themis::Models::init
+    max_expired_at = Themis::Models::Flag.all_living.max :expired_at
+    approx_delay = Themis::Configuration::get_contest_flow.update_period
+    if max_expired_at.nil?
+        approx_end = DateTime.now
+    else
+        approx_end = max_expired_at
+    end
+
+    puts "Approximately at #{approx_end} + ~#{approx_delay}s"
+end
+
 namespace :contest do
     desc 'Init contest'
     task :init do
@@ -96,6 +112,11 @@ namespace :contest do
     desc 'Enqueue complete contest'
     task :complete_async do
         change_contest_state :complete_async
+    end
+
+    desc 'Estimate contest completion time'
+    task :estimate_completion do
+        estimate_completion
     end
 end
 

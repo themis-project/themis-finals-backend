@@ -26,10 +26,6 @@ module Themis
                     Themis::Utils::Queue::enqueue "#{tube_namespace}.main", 'update'
                 end
 
-                EM.add_periodic_timer contest_flow.update_period do
-                    Themis::Utils::Queue::enqueue "#{tube_namespace}.main", 'control_complete'
-                end
-
                 Signal.trap 'INT' do
                     EM.stop
                 end
