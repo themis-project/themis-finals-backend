@@ -1,4 +1,4 @@
-require 'themis/attack/result'
+require 'themis/finals/attack/result'
 require './lib/utils/event-emitter'
 require './lib/constants/team-service-state'
 
@@ -38,7 +38,7 @@ module Themis
                 attempt = Themis::Models::AttackAttempt.create(
                     :occured_at => DateTime.now,
                     :request => data.to_s,
-                    :response => Themis::Attack::Result::ERR_GENERIC,
+                    :response => Themis::Finals::Attack::Result::ERR_GENERIC,
                     :team_id => team.id
                 )
 
@@ -47,14 +47,14 @@ module Themis
                 attempt_count = Themis::Models::AttackAttempt.where(:team => team).where('occured_at >= ?', threshold.to_datetime).count
 
                 if attempt_count > Themis::Configuration::get_contest_flow.attack_limit_attempts
-                    r = Themis::Attack::Result::ERR_ATTEMPTS_LIMIT
+                    r = Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT
                     attempt.response = r
                     attempt.save
                     return r
                 end
 
                 unless data.respond_to? 'match'
-                    r = Themis::Attack::Result::ERR_INVALID_FORMAT
+                    r = Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
                     attempt.response = r
                     attempt.save
                     return r
@@ -62,7 +62,7 @@ module Themis
 
                 match = data.match /^[\da-f]{32}=$/
                 if match.nil?
-                    r = Themis::Attack::Result::ERR_INVALID_FORMAT
+                    r = Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
                     attempt.response = r
                     attempt.save
                     return r
@@ -71,14 +71,14 @@ module Themis
                 flag = Themis::Models::Flag.exclude(:pushed_at => nil).where(:flag => match[0]).first
 
                 if flag.nil?
-                    r = Themis::Attack::Result::ERR_FLAG_NOT_FOUND
+                    r = Themis::Finals::Attack::Result::ERR_FLAG_NOT_FOUND
                     attempt.response = r
                     attempt.save
                     return r
                 end
 
                 if flag.team_id == team.id
-                    r = Themis::Attack::Result::ERR_FLAG_YOURS
+                    r = Themis::Finals::Attack::Result::ERR_FLAG_YOURS
                     attempt.response = r
                     attempt.save
                     return r
@@ -90,14 +90,14 @@ module Themis
                 )
 
                 if team_service_state.nil? or team_service_state.state != Themis::Constants::TeamServiceState::UP
-                    r = Themis::Attack::Result::ERR_SERVICE_NOT_UP
+                    r = Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP
                     attempt.response = r
                     attempt.save
                     return r
                 end
 
                 if flag.expired_at.to_datetime < DateTime.now
-                    r = Themis::Attack::Result::ERR_FLAG_EXPIRED
+                    r = Themis::Finals::Attack::Result::ERR_FLAG_EXPIRED
                     attempt.response = r
                     attempt.save
                     return r
@@ -112,7 +112,7 @@ module Themis
                             :team_id => team.id,
                             :flag_id => flag.id
                         )
-                        r = Themis::Attack::Result::SUCCESS_FLAG_ACCEPTED
+                        r = Themis::Finals::Attack::Result::SUCCESS_FLAG_ACCEPTED
 
                         Themis::Utils::EventEmitter::emit_log 4, {
                             attack_team_id: team.id,
@@ -121,7 +121,7 @@ module Themis
                         }
                     end
                 rescue ::Sequel::UniqueConstraintViolation => e
-                    r = Themis::Attack::Result::ERR_FLAG_SUBMITTED
+                    r = Themis::Finals::Attack::Result::ERR_FLAG_SUBMITTED
                 end
 
                 attempt.response = r
