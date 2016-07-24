@@ -1,13 +1,13 @@
 PATH
   remote: /var/themis/finals/lib/attack-result-rb
   specs:
-    themis-finals-attack-result (1.0.0)
+    themis-finals-attack-result (4.0.0)
       ruby-enum
 
 PATH
   remote: /var/themis/finals/lib/checker-result-rb
   specs:
-    themis-checker-result (1.1.0)
+    themis-finals-checker-result (2.0.0)
       ruby-enum (~> 0.5.0)
 
 GEM
@@ -79,8 +79,8 @@ DEPENDENCIES
   sequel_pg
   sinatra
   sinatra-contrib
-  themis-checker-result!
   themis-finals-attack-result!
+  themis-finals-checker-result!
   thin
 
 BUNDLED WITH
