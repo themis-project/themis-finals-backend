@@ -1,6 +1,7 @@
 require './lib/utils/logger'
 require 'beaneater'
 require './lib/controllers/contest'
+require './lib/constants/protocol'
 require 'json'
 
 module Themis
@@ -54,6 +55,7 @@ module Themis
         end
 
         ::Themis::Finals::Models::Service.all.each do |service|
+          next unless service.protocol == ::Themis::Finals::Constants::Protocol::BEANSTALK
           channel = "#{tube_namespace}.service.#{service.alias}.report"
           beanstalk.jobs.register channel do |job|
             begin

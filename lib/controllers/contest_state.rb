@@ -22,7 +22,8 @@ module Themis
             ::Themis::Finals::Configuration.get_services.each do |service_opts|
               ::Themis::Finals::Models::Service.create(
                 name: service_opts.name,
-                alias: service_opts.alias
+                alias: service_opts.alias,
+                protocol: service_opts.protocol
               )
             end
 

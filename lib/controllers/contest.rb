@@ -11,6 +11,7 @@ require './lib/controllers/scoreboard_state'
 require './lib/constants/flag_poll_state'
 require './lib/constants/team_service_state'
 require './lib/controllers/ctftime'
+require './lib/constants/protocol'
 require 'base64'
 
 module Themis
@@ -39,28 +40,33 @@ module Themis
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info "Pushing flag `#{flag.flag}` to service "\
                            "`#{service.name}` of `#{team.name}` ..."
-              job_data = {
-                operation: 'push',
-                endpoint: team.host,
-                flag: flag.flag,
-                adjunct: ::Base64.encode64(flag.adjunct),
-                metadata: {
-                  timestamp: ::DateTime.now.to_s,
-                  round: round_number,
-                  team_name: team.name,
-                  service_name: service.name
-                }
-              }.to_json
-              # TODO: deal with TTR later
-              # opts = {
-              #   delay: 0,
-              #   ttr: ::Themis::Finals::Configuration.get_beanstalk_ttr
-              # }
-              ::Themis::Finals::Utils::Queue.enqueue(
-                "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service.#{service.alias}"\
-                '.listen',
-                job_data
-              )
+              case service.protocol
+              when ::Themis::Finals::Constants::Protocol::BEANSTALK
+                job_data = {
+                  operation: 'push',
+                  endpoint: team.host,
+                  flag: flag.flag,
+                  adjunct: ::Base64.encode64(flag.adjunct),
+                  metadata: {
+                    timestamp: ::DateTime.now.to_s,
+                    round: round_number,
+                    team_name: team.name,
+                    service_name: service.name
+                  }
+                }.to_json
+                # TODO: deal with TTR later
+                # opts = {
+                #   delay: 0,
+                #   ttr: ::Themis::Finals::Configuration.get_beanstalk_ttr
+                # }
+                ::Themis::Finals::Utils::Queue.enqueue(
+                  "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service."\
+                  "#{service.alias}.listen",
+                  job_data
+                )
+              else
+                @logger.error 'Not implemented'
+              end
             end
           end
         end
@@ -128,28 +134,33 @@ module Themis
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info "Polling flag `#{flag.flag}` from service "\
                            "`#{service.name}` of `#{team.name}` ..."
-              job_data = {
-                operation: 'pull',
-                request_id: poll.id,
-                endpoint: team.host,
-                flag: flag.flag,
-                adjunct: ::Base64.encode64(flag.adjunct),
-                metadata: {
-                  timestamp: ::DateTime.now.to_s,
-                  round: round_number,
-                  team_name: team.name,
-                  service_name: service.name
-                }
-              }.to_json
-              # opts = {
-              #   delay: 0,
-              #   ttr: ::Themis::Finals::Configuration.get_beanstalk_ttr
-              # }
-              ::Themis::Finals::Utils::Queue.enqueue(
-                "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service.#{service.alias}"\
-                '.listen',
-                job_data
-              )
+              case service.protocol
+              when ::Themis::Finals::Constants::Protocol::BEANSTALK
+                job_data = {
+                  operation: 'pull',
+                  request_id: poll.id,
+                  endpoint: team.host,
+                  flag: flag.flag,
+                  adjunct: ::Base64.encode64(flag.adjunct),
+                  metadata: {
+                    timestamp: ::DateTime.now.to_s,
+                    round: round_number,
+                    team_name: team.name,
+                    service_name: service.name
+                  }
+                }.to_json
+                # opts = {
+                #   delay: 0,
+                #   ttr: ::Themis::Finals::Configuration.get_beanstalk_ttr
+                # }
+                ::Themis::Finals::Utils::Queue.enqueue(
+                  "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service.#{service.alias}"\
+                  '.listen',
+                  job_data
+                )
+              else
+                @logger.error 'Not implemented'
+              end
             end
           end
         end

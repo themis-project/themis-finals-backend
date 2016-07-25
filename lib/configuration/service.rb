@@ -12,11 +12,12 @@ module Themis
       end
 
       class Service
-        attr_accessor :alias, :name
+        attr_accessor :alias, :name, :protocol
 
         def initialize(service_alias)
           @alias = service_alias
           @name = nil
+          @protocol = 1
         end
       end
 
@@ -29,6 +30,10 @@ module Themis
 
         def name(name)
           @service.name = name
+        end
+
+        def protocol(protocol)
+          @service.protocol = protocol
         end
       end
 
