@@ -6,6 +6,7 @@ require 'date'
 require './lib/controllers/identity'
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
+require './lib/controllers/contest'
 require './lib/utils/event_emitter'
 require './lib/controllers/scoreboard_state'
 require './lib/backend/rack_monkey_patch'
@@ -372,6 +373,75 @@ module Themis
           end
 
           json r
+        end
+
+        post '/report_push' do
+          unless request.content_type == 'application/json'
+            halt 400
+          end
+
+          payload = nil
+
+          begin
+            request.body.rewind
+            payload = ::JSON.parse request.body.read
+          rescue => e
+            halt 400
+          end
+
+          begin
+            flag = ::Themis::Finals::Models::Flag.first(
+              flag: payload['flag']
+            )
+            if flag.nil?
+              halt 400
+            else
+              ::Themis::Finals::Controllers::Contest.handle_push(
+                flag,
+                payload['status'],
+                payload['adjunct']
+              )
+            end
+          rescue => e
+            halt 400
+          end
+
+          status 200
+          body ''
+        end
+
+        post '/report_pull' do
+          unless request.content_type == 'application/json'
+            halt 400
+          end
+
+          payload = nil
+
+          begin
+            request.body.rewind
+            payload = ::JSON.parse request.body.read
+          rescue => e
+            halt 400
+          end
+
+          begin
+            poll = ::Themis::Finals::Models::FlagPoll.first(
+              id: payload['request_id']
+            )
+            if poll.nil?
+              halt 400
+            else
+              ::Themis::Finals::Controllers::Contest.handle_poll(
+                poll,
+                payload['status']
+              )
+            end
+          rescue => e
+            halt 400
+          end
+
+          status 200
+          body ''
         end
       end
     end

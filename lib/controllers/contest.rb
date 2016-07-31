@@ -13,6 +13,7 @@ require './lib/constants/team_service_state'
 require './lib/controllers/ctftime'
 require './lib/constants/protocol'
 require 'base64'
+require 'net/http'
 
 module Themis
   module Finals
@@ -64,6 +65,30 @@ module Themis
                   "#{service.alias}.listen",
                   job_data
                 )
+              when ::Themis::Finals::Constants::Protocol::REST_BASIC
+                job_data = {
+                  endpoint: team.host,
+                  flag: flag.flag,
+                  adjunct: ::Base64.encode64(flag.adjunct),
+                  metadata: {
+                    timestamp: ::DateTime.now.to_s,
+                    round: round_number,
+                    team_name: team.name,
+                    service_name: service.name
+                  }
+                }.to_json
+
+                uri = URI("http://#{service.alias}.checker.finals.themis-project.com/push")
+
+                req = ::Net::HTTP::Post.new(uri)
+                req.body = job_data
+                req.content_type = 'application/json'
+
+                res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
+                  http.request(req)
+                end
+
+                @logger.info res.value
               else
                 @logger.error 'Not implemented'
               end
@@ -158,6 +183,31 @@ module Themis
                   '.listen',
                   job_data
                 )
+              when ::Themis::Finals::Constants::Protocol::REST_BASIC
+                job_data = {
+                  request_id: poll.id,
+                  endpoint: team.host,
+                  flag: flag.flag,
+                  adjunct: ::Base64.encode64(flag.adjunct),
+                  metadata: {
+                    timestamp: ::DateTime.now.to_s,
+                    round: round_number,
+                    team_name: team.name,
+                    service_name: service.name
+                  }
+                }.to_json
+
+                uri = URI("http://#{service.alias}.checker.finals.themis-project.com/pull")
+
+                req = ::Net::HTTP::Post.new(uri)
+                req.body = job_data
+                req.content_type = 'application/json'
+
+                res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
+                  http.request(req)
+                end
+
+                @logger.info res.value
               else
                 @logger.error 'Not implemented'
               end
