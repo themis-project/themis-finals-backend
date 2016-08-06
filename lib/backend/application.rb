@@ -375,7 +375,7 @@ module Themis
           json r
         end
 
-        post '/report_push' do
+        post '/checker/v1/report_push' do
           unless request.content_type == 'application/json'
             halt 400
           end
@@ -410,7 +410,7 @@ module Themis
           body ''
         end
 
-        post '/report_pull' do
+        post '/checker/v1/report_pull' do
           unless request.content_type == 'application/json'
             halt 400
           end

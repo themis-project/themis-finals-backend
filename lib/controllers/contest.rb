@@ -67,18 +67,21 @@ module Themis
                 )
               when ::Themis::Finals::Constants::Protocol::REST_BASIC
                 job_data = {
-                  endpoint: team.host,
-                  flag: flag.flag,
-                  adjunct: ::Base64.encode64(flag.adjunct),
+                  params: {
+                    endpoint: team.host,
+                    flag: flag.flag,
+                    adjunct: ::Base64.encode64(flag.adjunct),
+                  },
                   metadata: {
                     timestamp: ::DateTime.now.to_s,
                     round: round_number,
                     team_name: team.name,
                     service_name: service.name
-                  }
+                  },
+                  report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v1/report_push"
                 }.to_json
 
-                uri = URI("http://#{service.alias}.checker.finals.themis-project.com/push")
+                uri = URI(service.metadata['push_url'])
 
                 req = ::Net::HTTP::Post.new(uri)
                 req.body = job_data
@@ -185,19 +188,22 @@ module Themis
                 )
               when ::Themis::Finals::Constants::Protocol::REST_BASIC
                 job_data = {
-                  request_id: poll.id,
-                  endpoint: team.host,
-                  flag: flag.flag,
-                  adjunct: ::Base64.encode64(flag.adjunct),
+                  params: {
+                    request_id: poll.id,
+                    endpoint: team.host,
+                    flag: flag.flag,
+                    adjunct: ::Base64.encode64(flag.adjunct),
+                  },
                   metadata: {
                     timestamp: ::DateTime.now.to_s,
                     round: round_number,
                     team_name: team.name,
                     service_name: service.name
-                  }
+                  },
+                  report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v1/report_pull"
                 }.to_json
 
-                uri = URI("http://#{service.alias}.checker.finals.themis-project.com/pull")
+                uri = URI(service.metadata['pull_url'])
 
                 req = ::Net::HTTP::Post.new(uri)
                 req.body = job_data

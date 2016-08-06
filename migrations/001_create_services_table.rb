@@ -5,6 +5,7 @@
       String :name, size: 50, null: false, unique: true
       String :alias, size: 50, null: false, unique: true
       Integer :protocol, null: false, default: 0
+      json :metadata
     end
   end
 
