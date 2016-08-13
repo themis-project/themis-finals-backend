@@ -4,7 +4,10 @@ require './lib/utils/logger'
 require './lib/controllers/contest'
 
 ::Sidekiq.configure_server do |config|
-  config.redis = { url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}/#{ENV['REDIS_DB']}" }
+  config.redis = {
+    url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}/"\
+         "#{ENV['THEMIS_FINALS_QUEUE_REDIS_DB']}"
+  }
 
   config.on(:startup) do
     puts "Starting queue process, instance #{ENV['QUEUE_INSTANCE']}"
@@ -20,7 +23,10 @@ require './lib/controllers/contest'
 end
 
 ::Sidekiq.configure_client do |config|
-  config.redis = { url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}/#{ENV['REDIS_DB']}" }
+  config.redis = {
+    url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}/"\
+         "#{ENV['THEMIS_FINALS_QUEUE_REDIS_DB']}"
+  }
 end
 
 module Themis

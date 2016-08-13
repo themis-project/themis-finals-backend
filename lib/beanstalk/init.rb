@@ -6,7 +6,7 @@ require 'json'
 
 module Themis
   module Finals
-    module Queue
+    module Beanstalk
       @logger = ::Themis::Finals::Utils::Logger.get
 
       def self.run

@@ -1,4 +1,4 @@
 require './config'
-require './lib/backend/application'
+require './lib/server/application'
 
-run ::Themis::Finals::Backend::Application
+run ::Themis::Finals::Server::Application

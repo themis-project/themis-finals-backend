@@ -10,12 +10,12 @@ require './lib/controllers/contest'
 require './lib/utils/event_emitter'
 require './lib/controllers/scoreboard_state'
 require './lib/controllers/token'
-require './lib/backend/rack_monkey_patch'
+require './lib/server/rack_monkey_patch'
 require './lib/models/init'
 
 module Themis
   module Finals
-    module Backend
+    module Server
       class Application < ::Sinatra::Base
         configure do
           ::Themis::Finals::Models.init

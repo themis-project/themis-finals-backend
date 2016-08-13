@@ -1,5 +1,4 @@
 require 'eventmachine'
-require './lib/utils/queue'
 require './lib/utils/logger'
 require './lib/queue/tasks'
 

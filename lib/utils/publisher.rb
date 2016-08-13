@@ -38,7 +38,7 @@ module Themis
           return unless @_client.nil?
           host = ENV['REDIS_HOST'] || '127.0.0.1'
           port = ENV['REDIS_PORT'].to_i || 6379
-          db = ENV['REDIS_DB'].to_i || 0
+          db = ENV['THEMIS_FINALS_STREAM_REDIS_DB'].to_i || 0
           @_client = ::Redis.new host: host, port: port, db: db
         end
       end

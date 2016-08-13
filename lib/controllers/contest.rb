@@ -2,7 +2,7 @@ require 'json'
 require './lib/controllers/round'
 require './lib/controllers/flag'
 require './lib/controllers/score'
-require './lib/utils/queue'
+require './lib/utils/beanstalk'
 require 'themis/finals/checker/result'
 require './lib/controllers/contest_state'
 require './lib/utils/event_emitter'
@@ -62,7 +62,7 @@ module Themis
                 #   delay: 0,
                 #   ttr: ::Themis::Finals::Configuration.get_beanstalk_ttr
                 # }
-                ::Themis::Finals::Utils::Queue.enqueue(
+                ::Themis::Finals::Utils::Beanstalk.enqueue(
                   "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service."\
                   "#{service.alias}.listen",
                   job_data
@@ -185,9 +185,9 @@ module Themis
                 #   delay: 0,
                 #   ttr: ::Themis::Finals::Configuration.get_beanstalk_ttr
                 # }
-                ::Themis::Finals::Utils::Queue.enqueue(
-                  "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service.#{service.alias}"\
-                  '.listen',
+                ::Themis::Finals::Utils::Beanstalk.enqueue(
+                  "#{ENV['BEANSTALKD_TUBE_NAMESPACE']}.service."\
+                  "#{service.alias}.listen",
                   job_data
                 )
               when ::Themis::Finals::Constants::Protocol::REST_BASIC
@@ -196,7 +196,7 @@ module Themis
                     request_id: poll.id,
                     endpoint: team.host,
                     flag: flag.flag,
-                    adjunct: ::Base64.encode64(flag.adjunct),
+                    adjunct: ::Base64.encode64(flag.adjunct)
                   },
                   metadata: {
                     timestamp: ::DateTime.now.to_s,
@@ -259,7 +259,7 @@ module Themis
             flag.save
 
             ::Themis::Finals::Models::DB.after_commit do
-                @logger.info "Prolonged flag `#{flag.flag}` lifetime!"
+              @logger.info "Prolonged flag `#{flag.flag}` lifetime!"
             end
           end
         end

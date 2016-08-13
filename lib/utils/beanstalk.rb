@@ -3,7 +3,7 @@ require 'beaneater'
 module Themis
   module Finals
     module Utils
-      module Queue
+      module Beanstalk
         # ::Beaneater.configure do |config|
         #   config.default_put_delay = 0
         #   config.default_put_ttr = ::Themis::Finals::Configuration.get_beanstalk_ttr
