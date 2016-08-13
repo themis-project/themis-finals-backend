@@ -1,6 +1,7 @@
 require 'eventmachine'
 require './lib/utils/queue'
 require './lib/utils/logger'
+require './lib/queue/tasks'
 
 module Themis
   module Finals
@@ -12,27 +13,16 @@ module Themis
         ::EM.run do
           @logger.info 'Scheduler started, CTRL+C to stop'
 
-          tube_namespace = ENV['BEANSTALKD_TUBE_NAMESPACE']
-
           ::EM.add_periodic_timer contest_flow.push_period do
-            ::Themis::Finals::Utils::Queue.enqueue(
-              "#{tube_namespace}.main",
-              'push'
-            )
+            ::Themis::Finals::Queue::Tasks::PushFlags.perform_async
           end
 
           ::EM.add_periodic_timer contest_flow.poll_period do
-            ::Themis::Finals::Utils::Queue.enqueue(
-              "#{tube_namespace}.main",
-              'poll'
-            )
+            ::Themis::Finals::Queue::Tasks::PollFlags.perform_async
           end
 
           ::EM.add_periodic_timer contest_flow.update_period do
-            ::Themis::Finals::Utils::Queue.enqueue(
-              "#{tube_namespace}.main",
-              'update'
-            )
+            ::Themis::Finals::Queue::Tasks::UpdateScores.perform_async
           end
 
           ::Signal.trap 'INT' do

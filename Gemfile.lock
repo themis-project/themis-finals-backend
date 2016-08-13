@@ -21,6 +21,8 @@ GEM
       aws-sdk-core (= 2.3.21)
     backports (3.6.8)
     beaneater (1.0.0)
+    concurrent-ruby (1.0.2)
+    connection_pool (2.2.0)
     daemons (1.2.3)
     dotenv (2.1.1)
     eventmachine (1.2.0.1)
@@ -44,6 +46,11 @@ GEM
     sequel_pg (1.6.17)
       pg (>= 0.8.0)
       sequel (>= 4.0.0)
+    sidekiq (4.1.4)
+      concurrent-ruby (~> 1.0)
+      connection_pool (~> 2.2, >= 2.2.0)
+      redis (~> 3.2, >= 3.2.1)
+      sinatra (>= 1.4.7)
     sinatra (1.4.7)
       rack (~> 1.5)
       rack-protection (~> 1.4)
@@ -77,6 +84,7 @@ DEPENDENCIES
   ruby-ip
   sequel
   sequel_pg
+  sidekiq
   sinatra
   sinatra-contrib
   themis-finals-attack-result!

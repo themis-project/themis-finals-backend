@@ -9,12 +9,18 @@ require './lib/controllers/attack'
 require './lib/controllers/contest'
 require './lib/utils/event_emitter'
 require './lib/controllers/scoreboard_state'
+require './lib/controllers/token'
 require './lib/backend/rack_monkey_patch'
+require './lib/models/init'
 
 module Themis
   module Finals
     module Backend
       class Application < ::Sinatra::Base
+        configure do
+          ::Themis::Finals::Models.init
+        end
+
         configure :production, :development do
           enable :logging
         end
@@ -380,12 +386,18 @@ module Themis
             halt 400
           end
 
+          header_name = "HTTP_#{ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER'].upcase.gsub('-', '_')}"
+          auth_token = request.env[header_name]
+
+          halt 401 unless ::Themis::Finals::Controllers::Token.verify_checker_token(auth_token)
+
           payload = nil
 
           begin
             request.body.rewind
             payload = ::JSON.parse request.body.read
           rescue => e
+            # puts "HELL1 - #{e}"
             halt 400
           end
 
@@ -403,6 +415,7 @@ module Themis
               )
             end
           rescue => e
+            # puts "HELL2 - #{e} - #{payload} - #{e.backtrace}"
             halt 400
           end
 
@@ -414,6 +427,11 @@ module Themis
           unless request.content_type == 'application/json'
             halt 400
           end
+
+          header_name = "HTTP_#{ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER'].upcase.gsub('-', '_')}"
+          auth_token = request.env[header_name]
+
+          halt 401 unless ::Themis::Finals::Controllers::Token.verify_checker_token(auth_token)
 
           payload = nil
 

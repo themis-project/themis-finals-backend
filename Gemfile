@@ -15,6 +15,7 @@ gem 'sequel_pg'
 gem 'ruby-enum'
 gem 'aws-sdk'
 gem 'dotenv'
+gem 'sidekiq'
 # gem 'themis-finals-checker-result'
 # gem 'themis-finals-attack-result'
 

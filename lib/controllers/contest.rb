@@ -12,8 +12,10 @@ require './lib/constants/flag_poll_state'
 require './lib/constants/team_service_state'
 require './lib/controllers/ctftime'
 require './lib/constants/protocol'
+require './lib/controllers/token'
 require 'base64'
 require 'net/http'
+require './lib/queue/tasks'
 
 module Themis
   module Finals
@@ -86,6 +88,8 @@ module Themis
                 req = ::Net::HTTP::Post.new(uri)
                 req.body = job_data
                 req.content_type = 'application/json'
+                req[ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER']] = \
+                  ::Themis::Finals::Controllers::Token.issue_master_token
 
                 res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
                   http.request(req)
@@ -130,7 +134,7 @@ module Themis
               flag.save
               @logger.info "Successfully pushed flag `#{flag.flag}`!"
 
-              poll_flag flag
+              ::Themis::Finals::Queue::Tasks::PullFlag.perform_async flag.flag
             else
               @logger.info "Failed to push flag `#{flag.flag}` (status code "\
                            "#{status})!"
@@ -208,6 +212,8 @@ module Themis
                 req = ::Net::HTTP::Post.new(uri)
                 req.body = job_data
                 req.content_type = 'application/json'
+                req[ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER']] = \
+                  ::Themis::Finals::Controllers::Token.issue_master_token
 
                 res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
                   http.request(req)
