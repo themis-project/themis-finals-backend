@@ -29,16 +29,18 @@ module Themis
                   data: data
                 }.to_json
 
+                namespace = ENV['THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE']
+
                 if internal
-                  publisher.publish 'themis:internal', event_data
+                  publisher.publish "#{namespace}:internal", event_data
                 end
 
                 if teams
-                  publisher.publish 'themis:teams', event_data
+                  publisher.publish "#{namespace}:teams", event_data
                 end
 
                 if other
-                  publisher.publish 'themis:other', event_data
+                  publisher.publish "#{namespace}:other", event_data
                 end
               rescue => e
                 @logger.error "Failed to publish the event. #{e}"
