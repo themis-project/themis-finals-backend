@@ -18,31 +18,39 @@ module Themis
         generator_secret 'Yj9W6vWzGS2pgifUeLz60+gKokzw9wzchUq7/70f664yIkv47YQpeUO0TZV6F57yMAvrkc7KBJ4CJul/tnO1IA=='  # an IV for flag generator
       end
 
-      team 'team_1' do  # this is an internal alias
+      team 'team1' do  # this is an internal alias
         name 'Team #1'  # team displayed name
         network '172.20.1.0/24'  # team network
-        host '172.20.1.2'  # game box address
+        host '172.20.1.3'  # game box address
       end
 
-      team 'team_2' do
+      team 'team2' do
         name 'Team #2'
         network '172.20.2.0/24'
-        host '172.20.2.2'
+        host '172.20.2.3'
       end
 
-      team 'team_3' do
+      team 'team3' do
         name 'Team #3'
         network '172.20.3.0/24'
-        host '172.20.3.2'
+        host '172.20.3.3'
       end
       # and so on for teams
 
-      service 'service_1' do  # this is an internal alias
+      service 'service1' do  # this is an internal alias
+        base_url = 'http://service1.checker.finals.themis-project.com'
+
         name 'Service #1'  # service displayed name
+        protocol 2
+        metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
 
-      service 'service_2' do
-        name 'Service #2'
+      service 'service2' do
+        base_url = 'http://service2.checker.finals.themis-project.com'
+
+        name 'Service #2'  # service displayed name
+        protocol 2
+        metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
       # and so on for services
     end
