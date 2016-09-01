@@ -2,6 +2,9 @@ require 'sidekiq'
 require './lib/models/init'
 require './lib/utils/logger'
 require './lib/controllers/contest'
+require './lib/utils/logger'
+
+logger = ::Themis::Finals::Utils::Logger.get
 
 ::Sidekiq.configure_server do |config|
   config.redis = {
@@ -10,15 +13,15 @@ require './lib/controllers/contest'
   }
 
   config.on(:startup) do
-    puts "Starting queue process, instance #{ENV['QUEUE_INSTANCE']}"
+    logger.info "Starting queue process, instance #{ENV['QUEUE_INSTANCE']}"
     require './config'
     ::Themis::Finals::Models.init
   end
   config.on(:quiet) do
-    puts 'Got USR1, stopping further job processing...'
+    logger.info 'Got USR1, stopping further job processing...'
   end
   config.on(:shutdown) do
-    puts 'Got TERM, shutting down process...'
+    logger.info 'Got TERM, shutting down process...'
   end
 end
 

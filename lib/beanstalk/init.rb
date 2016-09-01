@@ -3,6 +3,7 @@ require 'beaneater'
 require './lib/controllers/contest'
 require './lib/constants/protocol'
 require 'json'
+require 'base64'
 
 module Themis
   module Finals
@@ -32,7 +33,7 @@ module Themis
                   ::Themis::Finals::Controllers::Contest.handle_push(
                     flag,
                     job_data['status'],
-                    job_data['adjunct']
+                    ::Base64.decode64(job_data['adjunct'])
                   )
                 end
               when 'pull'

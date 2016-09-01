@@ -72,7 +72,7 @@ module Themis
                   params: {
                     endpoint: team.host,
                     flag: flag.flag,
-                    adjunct: ::Base64.encode64(flag.adjunct),
+                    adjunct: ::Base64.urlsafe_encode64(flag.adjunct),
                   },
                   metadata: {
                     timestamp: ::DateTime.now.to_s,
@@ -130,7 +130,7 @@ module Themis
                 ::Time.now +
                 ::Themis::Finals::Configuration.get_contest_flow.flag_lifetime
               flag.expired_at = expires.to_datetime
-              flag.adjunct = ::Base64.decode64 adjunct
+              flag.adjunct = adjunct
               flag.save
               @logger.info "Successfully pushed flag `#{flag.flag}`!"
 
@@ -196,7 +196,7 @@ module Themis
                     request_id: poll.id,
                     endpoint: team.host,
                     flag: flag.flag,
-                    adjunct: ::Base64.encode64(flag.adjunct)
+                    adjunct: ::Base64.urlsafe_encode64(flag.adjunct)
                   },
                   metadata: {
                     timestamp: ::DateTime.now.to_s,

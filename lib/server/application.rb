@@ -397,7 +397,6 @@ module Themis
             request.body.rewind
             payload = ::JSON.parse request.body.read
           rescue => e
-            # puts "HELL1 - #{e}"
             halt 400
           end
 
@@ -411,11 +410,10 @@ module Themis
               ::Themis::Finals::Controllers::Contest.handle_push(
                 flag,
                 payload['status'],
-                payload['adjunct']
+                ::Base64.urlsafe_decode64(payload['adjunct'])
               )
             end
           rescue => e
-            # puts "HELL2 - #{e} - #{payload} - #{e.backtrace}"
             halt 400
           end
 
