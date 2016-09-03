@@ -8,7 +8,6 @@ GEM
     aws-sdk-resources (2.3.21)
       aws-sdk-core (= 2.3.21)
     backports (3.6.8)
-    beaneater (1.0.0)
     concurrent-ruby (1.0.2)
     connection_pool (2.2.0)
     daemons (1.2.3)
@@ -65,7 +64,6 @@ PLATFORMS
 
 DEPENDENCIES
   aws-sdk
-  beaneater
   dotenv
   eventmachine
   hiredis
