@@ -64,7 +64,8 @@ module Themis
         end
 
         def generator_secret(generator_secret)
-          @contest_flow.generator_secret = ::Base64.decode64(generator_secret)
+          @contest_flow.generator_secret = \
+            ::Base64.urlsafe_decode64 generator_secret
         end
       end
 
