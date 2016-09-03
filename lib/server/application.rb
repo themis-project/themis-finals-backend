@@ -56,57 +56,41 @@ module Themis
 
         get '/contest/round' do
           round = ::Themis::Finals::Models::Round.count
-
-          r = {
-            value: (round == 0) ? nil : round
-          }
-
-          json r
+          json(value: (round == 0) ? nil : round)
         end
 
         get '/contest/state' do
           state = ::Themis::Finals::Models::ContestState.last
-
-          r = {
-            value: state.nil? ? nil : state.state
-          }
-
-          json r
+          json(value: state.nil? ? nil : state.state)
         end
 
         get '/contest/scoreboard' do
-          r = {
+          json(
             enabled: ::Themis::Finals::Controllers::ScoreboardState.is_enabled
-          }
-
-          json r
+          )
         end
 
         get '/teams' do
-          r = ::Themis::Finals::Models::Team.map do |team|
+          json ::Themis::Finals::Models::Team.map { |team|
             {
               id: team.id,
               name: team.name,
               guest: team.guest
             }
-          end
-
-          json r
+          }
         end
 
         get '/services' do
-          r = ::Themis::Finals::Models::Service.map do |service|
+          json ::Themis::Finals::Models::Service.map { |service|
             {
               id: service.id,
               name: service.name
             }
-          end
-
-          json r
+          }
         end
 
         get '/posts' do
-          r = ::Themis::Finals::Models::Post.map do |post|
+          json ::Themis::Finals::Models::Post.map { |post|
             {
               id: post.id,
               title: post.title,
@@ -114,9 +98,7 @@ module Themis
               created_at: post.created_at.iso8601,
               updated_at: post.updated_at.iso8601
             }
-          end
-
-          json r
+          }
         end
 
         post '/post' do
@@ -274,7 +256,7 @@ module Themis
         end
 
         get '/team/services' do
-          r = ::Themis::Finals::Models::TeamServiceState.map do |team_service_state|
+          json ::Themis::Finals::Models::TeamServiceState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,
@@ -282,9 +264,7 @@ module Themis
               state: team_service_state.state,
               updated_at: team_service_state.updated_at.iso8601
             }
-          end
-
-          json r
+          }
         end
 
         get '/team/attacks' do
