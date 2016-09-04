@@ -17,11 +17,11 @@ module Themis
             round_number = ::Themis::Finals::Models::Round.count
             ::Themis::Finals::Utils::EventEmitter.emit_all(
               'contest/round',
-              { value: round_number }
+              value: round_number
             )
             ::Themis::Finals::Utils::EventEmitter.emit_log(
               2,
-              { value: round_number }
+              value: round_number
             )
 
             ::Themis::Finals::Models::DB.after_commit do

@@ -5,7 +5,6 @@ module Themis
     module Configuration
       network do
         internal '172.20.0.0/24'  # internal network (for contest organizers)
-        other '172.20.100.0/24'  # other network (for visualization system)
       end
 
       contest_flow do

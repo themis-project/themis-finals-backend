@@ -134,93 +134,93 @@ def change_scoreboard_state(state)
 end
 
 namespace :scoreboard do
-  desc 'Enable scoreboard (for team and other networks)'
+  desc 'Enable scoreboard (for team and external networks)'
   task :enable do
     change_scoreboard_state :enabled
   end
 
-  desc 'Disable scoreboard (for team and other networks)'
+  desc 'Disable scoreboard (for team and external networks)'
   task :disable do
     change_scoreboard_state :disabled
   end
 
-  desc 'Post scoreboard on ctftime.org (requires additional settings for AWS S3)'
-  task :post do
-    require './config'
-    require './lib/models/init'
-    require './lib/controllers/ctftime'
+  # desc 'Post scoreboard on ctftime.org (requires additional settings for AWS S3)'
+  # task :post do
+  #   require './config'
+  #   require './lib/models/init'
+  #   require './lib/controllers/ctftime'
 
-    ::Themis::Finals::Controllers::CTFTime.post_scoreboard
-  end
+  #   ::Themis::Finals::Controllers::CTFTime.post_scoreboard
+  # end
 end
 
-namespace :export do
-  task :teams do
-    require './config'
-    require './lib/models/init'
-    require 'json'
+# namespace :export do
+#   task :teams do
+#     require './config'
+#     require './lib/models/init'
+#     require 'json'
 
-    r = ::Themis::Finals::Models::Team.map do |team|
-      {
-        id: team.id,
-        name: team.name,
-        guest: team.guest
-      }
-    end
+#     r = ::Themis::Finals::Models::Team.map do |team|
+#       {
+#         id: team.id,
+#         name: team.name,
+#         guest: team.guest
+#       }
+#     end
 
-    ::IO.write 'teams.json', ::JSON.pretty_generate(r)
-  end
+#     ::IO.write 'teams.json', ::JSON.pretty_generate(r)
+#   end
 
-  task :services do
-    require './config'
-    require './lib/models/init'
-    require 'json'
+#   task :services do
+#     require './config'
+#     require './lib/models/init'
+#     require 'json'
 
-    r = ::Themis::Finals::Models::Service.map do |service|
-      {
-        id: service.id,
-        name: service.name
-      }
-    end
+#     r = ::Themis::Finals::Models::Service.map do |service|
+#       {
+#         id: service.id,
+#         name: service.name
+#       }
+#     end
 
-    ::IO.write 'services.json', ::JSON.pretty_generate(r)
-  end
+#     ::IO.write 'services.json', ::JSON.pretty_generate(r)
+#   end
 
-  task :team_service_states do
-    require './config'
-    require './lib/models/init'
-    require 'json'
+#   task :team_service_states do
+#     require './config'
+#     require './lib/models/init'
+#     require 'json'
 
-    r = ::Themis::Finals::Models::TeamServiceHistoryState.map do |team_service_state|
-      {
-        id: team_service_state.id,
-        state: team_service_state.state,
-        team_id: team_service_state.team_id,
-        service_id: team_service_state.service_id,
-        created_at: team_service_state.created_at.iso8601
-      }
-    end
+#     r = ::Themis::Finals::Models::TeamServiceHistoryState.map do |team_service_state|
+#       {
+#         id: team_service_state.id,
+#         state: team_service_state.state,
+#         team_id: team_service_state.team_id,
+#         service_id: team_service_state.service_id,
+#         created_at: team_service_state.created_at.iso8601
+#       }
+#     end
 
-    ::IO.write 'team_service_states.json', ::JSON.pretty_generate(r)
-  end
+#     ::IO.write 'team_service_states.json', ::JSON.pretty_generate(r)
+#   end
 
-  task :attacks do
-    require './config'
-    require './lib/models/init'
-    require 'json'
+#   task :attacks do
+#     require './config'
+#     require './lib/models/init'
+#     require 'json'
 
-    r = ::Themis::Finals::Models::Attack.map do |attack|
-      flag = ::Themis::Finals::Models::Flag[attack.flag_id]
+#     r = ::Themis::Finals::Models::Attack.map do |attack|
+#       flag = ::Themis::Finals::Models::Flag[attack.flag_id]
 
-      {
-        id: attack.id,
-        occured_at: attack.occured_at.iso8601,
-        attacker_team_id: attack.team_id,
-        service_id: flag.service_id,
-        victim_team_id: flag.team_id
-      }
-    end
+#       {
+#         id: attack.id,
+#         occured_at: attack.occured_at.iso8601,
+#         attacker_team_id: attack.team_id,
+#         service_id: flag.service_id,
+#         victim_team_id: flag.team_id
+#       }
+#     end
 
-    ::IO.write 'attacks.json', ::JSON.pretty_generate(r)
-  end
-end
+#     ::IO.write 'attacks.json', ::JSON.pretty_generate(r)
+#   end
+# end

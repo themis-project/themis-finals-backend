@@ -22,22 +22,9 @@ module Themis
           attacks
         end
 
-        def self.consider_attack(attack, scoreboard_enabled)
+        def self.consider_attack(attack)
           attack.considered = true
           attack.save
-          data = {
-            id: attack.id,
-            occured_at: attack.occured_at.iso8601,
-            team_id: attack.team_id
-          }
-
-          ::Themis::Finals::Utils::EventEmitter.emit(
-            'team/attack',
-            data,
-            true,
-            scoreboard_enabled,
-            scoreboard_enabled
-          )
         end
 
         def self.process(team, data)
@@ -135,11 +122,12 @@ module Themis
               )
               r = ::Themis::Finals::Attack::Result::SUCCESS_FLAG_ACCEPTED
 
-              ::Themis::Finals::Utils::EventEmitter.emit_log 4, {
+              ::Themis::Finals::Utils::EventEmitter.emit_log(
+                4,
                 attack_team_id: team.id,
                 victim_team_id: flag.team_id,
                 service_id: flag.service_id
-              }
+              )
             end
           rescue ::Sequel::UniqueConstraintViolation => e
             r = ::Themis::Finals::Attack::Result::ERR_FLAG_SUBMITTED

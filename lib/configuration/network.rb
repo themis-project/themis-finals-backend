@@ -15,11 +15,10 @@ module Themis
       end
 
       class Network
-        attr_accessor :internal, :other
+        attr_accessor :internal
 
         def initialize
           @internal = []
-          @other = []
         end
       end
 
@@ -34,13 +33,6 @@ module Themis
           ip_addresses.each do |ip_addr_str|
             ip_addr = ::IP.new ip_addr_str
             @network.internal << ip_addr
-          end
-        end
-
-        def other(*ip_addresses)
-          ip_addresses.each do |ip_addr_str|
-            ip_addr = ::IP.new ip_addr_str
-            @network.other << ip_addr
           end
         end
       end

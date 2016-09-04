@@ -54,7 +54,7 @@ module Themis
 
             ::Themis::Finals::Utils::EventEmitter.emit_all(
               'contest/scoreboard',
-              { enabled: false }
+              enabled: false
             )
           end
         end

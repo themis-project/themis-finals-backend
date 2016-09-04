@@ -48,7 +48,7 @@ module Themis
                   params: {
                     endpoint: team.host,
                     flag: flag.flag,
-                    adjunct: ::Base64.urlsafe_encode64(flag.adjunct),
+                    adjunct: ::Base64.urlsafe_encode64(flag.adjunct)
                   },
                   metadata: {
                     timestamp: ::DateTime.now.to_s,
@@ -271,21 +271,21 @@ module Themis
           end
         end
 
-        def self.update_total_score(team, scoreboard_enabled)
+        def self.update_total_score(team)
           ::Themis::Finals::Models::DB.transaction do
             total_score = ::Themis::Finals::Models::TotalScore.first(
               team_id: team.id
             )
             if total_score.nil?
               total_score = ::Themis::Finals::Models::TotalScore.create(
-                defence_points: 0,
-                attack_points: 0,
+                defence_points: ::BigDecimal.new('0'),
+                attack_points: ::BigDecimal.new('0'),
                 team_id: team.id
               )
             end
 
-            defence_points = 0.0
-            attack_points = 0.0
+            defence_points = ::BigDecimal.new('0')
+            attack_points = ::BigDecimal.new('0')
 
             ::Themis::Finals::Models::Score.where(
               team_id: team.id
@@ -294,46 +294,32 @@ module Themis
               attack_points += score.attack_points
             end
 
-            total_score.defence_points = defence_points
-            total_score.attack_points = attack_points
+            precision = ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
+            total_score.defence_points = defence_points.round precision
+            total_score.attack_points = attack_points.round precision
             total_score.save
-
-            data = {
-              id: total_score.id,
-              team_id: total_score.team_id,
-              defence_points: total_score.defence_points.to_f.round(4),
-              attack_points: total_score.attack_points.to_f.round(4)
-            }
-
-            ::Themis::Finals::Utils::EventEmitter.emit(
-              'team/score',
-              data,
-              true,
-              scoreboard_enabled,
-              scoreboard_enabled
-            )
 
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info(
                 "Total score of team `#{team.name}` has been recalculated: "\
-                "defence - #{defence_points.to_f.round(4)} pts, "\
-                "attack - #{attack_points.to_f.round(4)} pts!"
+                "defence - #{total_score.defence_points} pts, "\
+                "attack - #{total_score.attack_points} pts!"
               )
             end
           end
         end
 
-        def self.update_total_scores(scoreboard_enabled)
+        def self.update_total_scores
           ::Themis::Finals::Models::Team.all.each do |team|
             begin
-              update_total_score team, scoreboard_enabled
+              update_total_score team
             rescue => e
               @logger.error e.to_s
             end
           end
         end
 
-        def self.update_score(flag, scoreboard_enabled)
+        def self.update_score(flag)
           ::Themis::Finals::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
@@ -344,8 +330,7 @@ module Themis
 
             ::Themis::Finals::Controllers::Score.charge_availability(
               flag,
-              polls,
-              scoreboard_enabled
+              polls
             )
 
             attacks = flag.attacks
@@ -354,22 +339,17 @@ module Themis
                 poll.state == ::Themis::Finals::Constants::FlagPollState::ERROR
               end
               if error_count == 0
-                ::Themis::Finals::Controllers::Score.charge_defence(
-                  flag,
-                  scoreboard_enabled
-                )
+                ::Themis::Finals::Controllers::Score.charge_defence(flag)
               end
             else
               attacks.each do |attack|
                 begin
                   ::Themis::Finals::Controllers::Score.charge_attack(
                     flag,
-                    attack,
-                    scoreboard_enabled
+                    attack
                   )
                   ::Themis::Finals::Controllers::Attack.consider_attack(
-                    attack,
-                    scoreboard_enabled
+                    attack
                   )
                 rescue => e
                   @logger.error e.to_s
@@ -382,28 +362,155 @@ module Themis
           end
         end
 
-        def self.update_scores(scoreboard_enabled)
+        def self.update_scores
           ::Themis::Finals::Models::Flag.all_expired.each do |flag|
             begin
-              update_score flag, scoreboard_enabled
+              update_score flag
             rescue => e
               @logger.error e.to_s
             end
           end
         end
 
+        def self.format_team_positions(positions)
+          positions.map { |position|
+            {
+              team_id: position[:team_id],
+              total_relative: position[:total_relative].to_s('F'),
+              defence_relative: position[:defence_relative].to_s('F'),
+              defence_points: position[:defence_points].to_s('F'),
+              attack_relative: position[:attack_relative].to_s('F'),
+              attack_points: position[:attack_points].to_s('F'),
+              last_attack: \
+                if position[:last_attack].nil?
+                  nil
+                else
+                  position[:last_attack].iso8601
+                end
+            }
+          }
+        end
+
         def self.update_all_scores
-          scoreboard_enabled = \
-            ::Themis::Finals::Controllers::ScoreboardState.is_enabled
+          update_scores
+          update_total_scores
+          control_complete
 
-          update_scores scoreboard_enabled
-          update_total_scores scoreboard_enabled
+          data = {
+            muted: false,
+            positions: format_team_positions(get_team_positions)
+          }
 
-          if scoreboard_enabled && ENV['CTFTIME_SCOREBOARD'] == 'true'
-            ::Themis::Finals::Controllers::CTFTime.post_scoreboard
+          if ::Themis::Finals::Controllers::ScoreboardState.is_enabled
+            ::Themis::Finals::Utils::EventEmitter.emit_all(
+              'scoreboard',
+              data
+            )
+          else
+            ::Themis::Finals::Utils::EventEmitter.emit(
+              'scoreboard',
+              data,
+              true,
+              false,
+              false
+            )
+          end
+        end
+
+        def self.sort_rows(a, b, precision)
+          zero_edge = ::BigDecimal.new(10 ** -(precision + 1), precision + 1)
+
+          a_total_relative = a[:total_relative]
+          b_total_relative = b[:total_relative]
+
+          if (a_total_relative - b_total_relative).abs < zero_edge
+            a_last_attack = a[:last_attack]
+            b_last_attack = b[:last_attack]
+            if a_last_attack.nil? && b_last_attack.nil?
+              return 0
+            elsif a_last_attack.nil? && !b_last_attack.nil?
+              return -1
+            elsif !a_last_attack.nil? && b_last_attack.nil?
+              return 1
+            else
+              if a_last_attack < b_last_attack
+                return 1
+              elsif a_last_attack > b_last_attack
+                return -1
+              else
+                return 0
+              end
+            end
           end
 
-          control_complete
+          if a_total_relative < b_total_relative
+            return 1
+          else
+            return -1
+          end
+        end
+
+        def self.get_team_positions
+          positions = ::Themis::Finals::Models::Team.all.map do |team|
+            last_attack = ::Themis::Finals::Models::Attack.last(
+              team_id: team.id,
+              considered: true
+            )
+
+            last_score = ::Themis::Finals::Models::TotalScore.first(
+              team_id: team.id
+            )
+
+            {
+              team_id: team.id,
+              defence_points: \
+                if last_score.nil?
+                  ::BigDecimal.new('0')
+                else
+                  last_score.defence_points
+                end,
+              attack_points: \
+                if last_score.nil?
+                  ::BigDecimal.new('0')
+                else
+                  last_score.attack_points
+                end,
+              last_attack: last_attack.nil? ? nil : last_attack.occured_at
+            }
+          end
+
+          leader_defence = positions.max_by { |x| x[:defence_points] }
+          max_defence = leader_defence[:defence_points]
+
+          leader_attack = positions.max_by { |x| x[:attack_points] }
+          max_attack = leader_attack[:attack_points]
+
+          precision = ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
+          zero_edge = ::BigDecimal.new(10 ** -(precision + 1), precision + 1)
+
+          positions.map! do |position|
+            position[:attack_relative] = \
+              if max_attack < zero_edge
+                ::BigDecimal.new('0')
+              else
+                (position[:attack_points] / max_attack).round(precision)
+              end
+            position[:defence_relative] = \
+              if max_defence < zero_edge
+                ::BigDecimal.new('0')
+              else
+                (position[:defence_points] / max_defence).round(precision)
+              end
+
+            position[:total_relative] = \
+              (::BigDecimal.new('0.5') *
+               (position[:attack_relative] + position[:defence_relative])
+              ).round(precision)
+
+            position
+          end
+
+          positions.sort! { |a, b| sort_rows(a, b, precision) }
         end
 
         def self.update_team_service_state(team, service, status)
@@ -456,19 +563,21 @@ module Themis
               team_service_state.save
             end
 
-            ::Themis::Finals::Utils::EventEmitter.emit_all 'team/service', {
+            ::Themis::Finals::Utils::EventEmitter.emit_all(
+              'team/service',
               id: team_service_state.id,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
               state: team_service_state.state,
               updated_at: team_service_state.updated_at.iso8601
-            }
+            )
 
-            ::Themis::Finals::Utils::EventEmitter.emit_log 3, {
+            ::Themis::Finals::Utils::EventEmitter.emit_log(
+              3,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
               state: team_service_state.state
-            }
+            )
           end
         end
       end

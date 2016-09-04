@@ -9,15 +9,15 @@ module Themis
       module EventEmitter
         @logger = ::Themis::Finals::Utils::Logger.get
 
-        def self.emit(name, data, internal, teams, other)
+        def self.emit(name, data, internal, team, external)
           event = nil
           ::Themis::Finals::Models::DB.transaction do
             event = ::Themis::Finals::Models::ServerSentEvent.create(
               name: name,
               data: data,
               internal: internal,
-              teams: teams,
-              other: other
+              team: team,
+              external: external
             )
 
             ::Themis::Finals::Models::DB.after_commit do
@@ -35,12 +35,12 @@ module Themis
                   publisher.publish "#{namespace}:internal", event_data
                 end
 
-                if teams
-                  publisher.publish "#{namespace}:teams", event_data
+                if team
+                  publisher.publish "#{namespace}:team", event_data
                 end
 
-                if other
-                  publisher.publish "#{namespace}:other", event_data
+                if external
+                  publisher.publish "#{namespace}:external", event_data
                 end
               rescue => e
                 @logger.error "Failed to publish the event. #{e}"

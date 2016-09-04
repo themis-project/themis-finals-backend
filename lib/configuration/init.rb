@@ -10,17 +10,15 @@ module Themis
         config = {
           network: {
             internal: [],
-            other: [],
-            teams: []
+            team: []
           }
         }
 
         network_opts = get_network
         config[:network][:internal] = network_opts.internal
-        config[:network][:other] = network_opts.other
 
         ::Themis::Finals::Configuration.get_teams.each do |team_opts|
-          config[:network][:teams] << team_opts.network
+          config[:network][:team] << team_opts.network
         end
 
         config

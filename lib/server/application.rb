@@ -3,6 +3,7 @@ require 'sinatra/json'
 require 'json'
 require 'ip'
 require 'date'
+require 'bigdecimal'
 require './lib/controllers/identity'
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
@@ -38,17 +39,14 @@ module Themis
           end
 
           if identity.nil? &&
-             ::Themis::Finals::Controllers::IdentityController.is_other(
-               remote_ip
-             )
-            identity = { name: 'other' }
-          end
-
-          if identity.nil? &&
              ::Themis::Finals::Controllers::IdentityController.is_internal(
                remote_ip
              )
             identity = { name: 'internal' }
+          end
+
+          if identity.nil?
+            identity = { name: 'external' }
           end
 
           json identity
@@ -64,9 +62,28 @@ module Themis
           json(value: state.nil? ? nil : state.state)
         end
 
-        get '/contest/scoreboard' do
+        get '/scoreboard' do
+          remote_ip = ::IP.new request.ip
+          is_internal = \
+            ::Themis::Finals::Controllers::IdentityController.is_internal(
+              remote_ip
+            )
+
+          muted = \
+            if is_internal
+              false
+            else
+              !::Themis::Finals::Controllers::ScoreboardState.is_enabled
+            end
+
+          positions = ::Themis::Finals::Controllers::Contest.get_team_positions
+
           json(
-            enabled: ::Themis::Finals::Controllers::ScoreboardState.is_enabled
+            muted: muted,
+            positions: \
+              ::Themis::Finals::Controllers::Contest.format_team_positions(
+                positions
+              )
           )
         end
 
@@ -136,13 +153,14 @@ module Themis
                 updated_at: ::DateTime.now
               )
 
-              ::Themis::Finals::Utils::EventEmitter.emit_all 'posts/add', {
+              ::Themis::Finals::Utils::EventEmitter.emit_all(
+                'posts/add',
                 id: post.id,
                 title: post.title,
                 description: post.description,
                 created_at: post.created_at.iso8601,
                 updated_at: post.updated_at.iso8601
-              }
+              )
             end
           rescue => e
             halt 400
@@ -168,9 +186,10 @@ module Themis
           ::Themis::Finals::Models::DB.transaction do
             post.destroy
 
-            ::Themis::Finals::Utils::EventEmitter.emit_all 'posts/remove', {
+            ::Themis::Finals::Utils::EventEmitter.emit_all(
+              'posts/remove',
               id: post_id
-            }
+            )
           end
 
           status 204
@@ -214,13 +233,14 @@ module Themis
               post.updated_at = ::DateTime.now
               post.save
 
-              ::Themis::Finals::Utils::EventEmitter.emit_all 'posts/edit', {
+              ::Themis::Finals::Utils::EventEmitter.emit_all(
+                'posts/edit',
                 id: post.id,
                 title: post.title,
                 description: post.description,
                 created_at: post.created_at.iso8601,
                 updated_at: post.updated_at.iso8601
-              }
+              )
             end
           rescue => e
             halt 400
@@ -230,30 +250,30 @@ module Themis
           body ''
         end
 
-        get '/team/scores' do
-          scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
-          scoreboard_enabled = scoreboard_state.nil? ? true : scoreboard_state.enabled
+        # get '/team/scores' do
+        #   scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
+        #   scoreboard_enabled = scoreboard_state.nil? ? true : scoreboard_state.enabled
 
-          remote_ip = ::IP.new request.ip
+        #   remote_ip = ::IP.new request.ip
 
-          if scoreboard_enabled ||
-             ::Themis::Finals::Controllers::IdentityController.is_internal(
-               remote_ip
-             )
-            r = ::Themis::Finals::Models::TotalScore.map do |total_score|
-              {
-                id: total_score.id,
-                team_id: total_score.team_id,
-                defence_points: total_score.defence_points.to_f.round(4),
-                attack_points: total_score.attack_points.to_f.round(4)
-              }
-            end
-          else
-            r = scoreboard_state.total_scores
-          end
+        #   if scoreboard_enabled ||
+        #      ::Themis::Finals::Controllers::IdentityController.is_internal(
+        #        remote_ip
+        #      )
+        #     r = ::Themis::Finals::Models::TotalScore.map do |total_score|
+        #       {
+        #         id: total_score.id,
+        #         team_id: total_score.team_id,
+        #         defence_points: total_score.defence_points.to_f.round(4),
+        #         attack_points: total_score.attack_points.to_f.round(4)
+        #       }
+        #     end
+        #   else
+        #     r = scoreboard_state.total_scores
+        #   end
 
-          json r
-        end
+        #   json r
+        # end
 
         get '/team/services' do
           json ::Themis::Finals::Models::TeamServiceState.map { |team_service_state|
@@ -267,29 +287,29 @@ module Themis
           }
         end
 
-        get '/team/attacks' do
-          scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
-          scoreboard_enabled = scoreboard_state.nil? ? true : scoreboard_state.enabled
+        # get '/team/attacks' do
+        #   scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
+        #   scoreboard_enabled = scoreboard_state.nil? ? true : scoreboard_state.enabled
 
-          remote_ip = ::IP.new request.ip
+        #   remote_ip = ::IP.new request.ip
 
-          if scoreboard_enabled ||
-             ::Themis::Finals::Controllers::IdentityController.is_internal(
-               remote_ip
-             )
-            r = ::Themis::Finals::Controllers::Attack.get_recent.map do |attack|
-              {
-                id: attack.id,
-                occured_at: attack.occured_at.iso8601,
-                team_id: attack.team_id
-              }
-            end
-          else
-            r = scoreboard_state.attacks
-          end
+        #   if scoreboard_enabled ||
+        #      ::Themis::Finals::Controllers::IdentityController.is_internal(
+        #        remote_ip
+        #      )
+        #     r = ::Themis::Finals::Controllers::Attack.get_recent.map do |attack|
+        #       {
+        #         id: attack.id,
+        #         occured_at: attack.occured_at.iso8601,
+        #         team_id: attack.team_id
+        #       }
+        #     end
+        #   else
+        #     r = scoreboard_state.attacks
+        #   end
 
-          json r
-        end
+        #   json r
+        # end
 
         get %r{^/team/pictures/(\d{1,2})$} do |team_id_str|
           team_id = team_id_str.to_i

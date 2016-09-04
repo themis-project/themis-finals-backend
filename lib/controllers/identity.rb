@@ -17,13 +17,6 @@ module Themis
           end
           !r.nil?
         end
-
-        def self.is_other(remote_ip)
-          r = ::Themis::Finals::Configuration.get_network.other.detect do |network|
-            remote_ip.is_in? network
-          end
-          !r.nil?
-        end
       end
     end
   end

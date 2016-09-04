@@ -5,8 +5,8 @@
       String :name, size: 50, null: false
       json :data
       TrueClass :internal, null: false, default: false
-      TrueClass :teams, null: false, default: false
-      TrueClass :other, null: false, default: false
+      TrueClass :team, null: false, default: false
+      TrueClass :external, null: false, default: false
     end
   end
 
