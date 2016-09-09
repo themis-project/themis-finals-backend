@@ -30,6 +30,8 @@ module Themis
       require './lib/models/flag_poll'
       require './lib/models/attack_attempt'
       require './lib/models/attack'
+      require './lib/models/scoreboard_position'
+      require './lib/models/scoreboard_history_position'
 
       def self.init
       end

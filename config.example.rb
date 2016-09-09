@@ -51,6 +51,14 @@ module Themis
         protocol 2
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
+
+      service 'service3' do
+        base_url = 'http://service3.checker.finals.themis-project.com'
+
+        name 'Service #3'  # service displayed name
+        protocol 2
+        metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
+      end
       # and so on for services
     end
   end

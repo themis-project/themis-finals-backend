@@ -4,8 +4,6 @@
       primary_key :id
       TrueClass :enabled, null: false, default: true
       DateTime :created_at, null: false
-      json :total_scores
-      json :attacks
     end
   end
 

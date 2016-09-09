@@ -3,7 +3,6 @@ require 'sinatra/json'
 require 'json'
 require 'ip'
 require 'date'
-require 'bigdecimal'
 require './lib/controllers/identity'
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
@@ -13,6 +12,8 @@ require './lib/controllers/scoreboard_state'
 require './lib/controllers/token'
 require './lib/server/rack_monkey_patch'
 require './lib/models/init'
+require './lib/controllers/scoreboard'
+require './lib/controllers/ctftime'
 
 module Themis
   module Finals
@@ -76,14 +77,40 @@ module Themis
               !::Themis::Finals::Controllers::ScoreboardState.is_enabled
             end
 
-          positions = ::Themis::Finals::Controllers::Contest.get_team_positions
+          if muted
+            obj = ::Themis::Finals::Models::ScoreboardHistoryPosition.last
+          else
+            obj = ::Themis::Finals::Models::ScoreboardPosition.last
+          end
 
           json(
             muted: muted,
-            positions: \
-              ::Themis::Finals::Controllers::Contest.format_team_positions(
-                positions
-              )
+            positions: obj.nil? ? {} : obj.data
+          )
+        end
+
+        get '/third-party/ctftime' do
+          remote_ip = ::IP.new request.ip
+          is_internal = \
+            ::Themis::Finals::Controllers::IdentityController.is_internal(
+              remote_ip
+            )
+
+          muted = \
+            if is_internal
+              false
+            else
+              !::Themis::Finals::Controllers::ScoreboardState.is_enabled
+            end
+
+          if muted
+            obj = ::Themis::Finals::Models::ScoreboardHistoryPosition.last
+          else
+            obj = ::Themis::Finals::Models::ScoreboardPosition.last
+          end
+
+          json(
+            standings: obj.nil? ? [] : ::Themis::Finals::Controllers::CTFTime.format_positions(obj.data)
           )
         end
 
@@ -250,31 +277,6 @@ module Themis
           body ''
         end
 
-        # get '/team/scores' do
-        #   scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
-        #   scoreboard_enabled = scoreboard_state.nil? ? true : scoreboard_state.enabled
-
-        #   remote_ip = ::IP.new request.ip
-
-        #   if scoreboard_enabled ||
-        #      ::Themis::Finals::Controllers::IdentityController.is_internal(
-        #        remote_ip
-        #      )
-        #     r = ::Themis::Finals::Models::TotalScore.map do |total_score|
-        #       {
-        #         id: total_score.id,
-        #         team_id: total_score.team_id,
-        #         defence_points: total_score.defence_points.to_f.round(4),
-        #         attack_points: total_score.attack_points.to_f.round(4)
-        #       }
-        #     end
-        #   else
-        #     r = scoreboard_state.total_scores
-        #   end
-
-        #   json r
-        # end
-
         get '/team/services' do
           json ::Themis::Finals::Models::TeamServiceState.map { |team_service_state|
             {
@@ -286,30 +288,6 @@ module Themis
             }
           }
         end
-
-        # get '/team/attacks' do
-        #   scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
-        #   scoreboard_enabled = scoreboard_state.nil? ? true : scoreboard_state.enabled
-
-        #   remote_ip = ::IP.new request.ip
-
-        #   if scoreboard_enabled ||
-        #      ::Themis::Finals::Controllers::IdentityController.is_internal(
-        #        remote_ip
-        #      )
-        #     r = ::Themis::Finals::Controllers::Attack.get_recent.map do |attack|
-        #       {
-        #         id: attack.id,
-        #         occured_at: attack.occured_at.iso8601,
-        #         team_id: attack.team_id
-        #       }
-        #     end
-        #   else
-        #     r = scoreboard_state.attacks
-        #   end
-
-        #   json r
-        # end
 
         get %r{^/team/pictures/(\d{1,2})$} do |team_id_str|
           team_id = team_id_str.to_i

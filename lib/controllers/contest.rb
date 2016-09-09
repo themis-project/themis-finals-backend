@@ -9,9 +9,9 @@ require './lib/controllers/attack'
 require './lib/controllers/scoreboard_state'
 require './lib/constants/flag_poll_state'
 require './lib/constants/team_service_state'
-require './lib/controllers/ctftime'
 require './lib/constants/protocol'
 require './lib/controllers/token'
+require './lib/controllers/scoreboard'
 require 'base64'
 require 'net/http'
 require './lib/queue/tasks'
@@ -278,14 +278,14 @@ module Themis
             )
             if total_score.nil?
               total_score = ::Themis::Finals::Models::TotalScore.create(
-                defence_points: ::BigDecimal.new('0'),
-                attack_points: ::BigDecimal.new('0'),
+                defence_points: 0.0,
+                attack_points: 0.0,
                 team_id: team.id
               )
             end
 
-            defence_points = ::BigDecimal.new('0')
-            attack_points = ::BigDecimal.new('0')
+            defence_points = 0.0
+            attack_points = 0.0
 
             ::Themis::Finals::Models::Score.where(
               team_id: team.id
@@ -294,9 +294,8 @@ module Themis
               attack_points += score.attack_points
             end
 
-            precision = ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
-            total_score.defence_points = defence_points.round precision
-            total_score.attack_points = attack_points.round precision
+            total_score.defence_points = defence_points
+            total_score.attack_points = attack_points
             total_score.save
 
             ::Themis::Finals::Models::DB.after_commit do
@@ -372,145 +371,42 @@ module Themis
           end
         end
 
-        def self.format_team_positions(positions)
-          positions.map { |position|
-            {
-              team_id: position[:team_id],
-              total_relative: position[:total_relative].to_s('F'),
-              defence_relative: position[:defence_relative].to_s('F'),
-              defence_points: position[:defence_points].to_s('F'),
-              attack_relative: position[:attack_relative].to_s('F'),
-              attack_points: position[:attack_points].to_s('F'),
-              last_attack: \
-                if position[:last_attack].nil?
-                  nil
-                else
-                  position[:last_attack].iso8601
-                end
-            }
-          }
-        end
-
         def self.update_all_scores
           update_scores
           update_total_scores
           control_complete
 
-          data = {
-            muted: false,
-            positions: format_team_positions(get_team_positions)
-          }
-
-          if ::Themis::Finals::Controllers::ScoreboardState.is_enabled
-            ::Themis::Finals::Utils::EventEmitter.emit_all(
-              'scoreboard',
-              data
+          formatted_positions = \
+            ::Themis::Finals::Controllers::Scoreboard.format_team_positions(
+              ::Themis::Finals::Controllers::Scoreboard.get_team_positions
             )
-          else
-            ::Themis::Finals::Utils::EventEmitter.emit(
-              'scoreboard',
-              data,
-              true,
-              false,
-              false
+
+          ::Themis::Finals::Models::DB.transaction do
+            ::Themis::Finals::Models::ScoreboardPosition.create(
+              created_at: ::DateTime.now,
+              data: formatted_positions
             )
-          end
-        end
 
-        def self.sort_rows(a, b, precision)
-          zero_edge = ::BigDecimal.new(10 ** -(precision + 1), precision + 1)
+            data = {
+              muted: false,
+              positions: formatted_positions
+            }
 
-          a_total_relative = a[:total_relative]
-          b_total_relative = b[:total_relative]
-
-          if (a_total_relative - b_total_relative).abs < zero_edge
-            a_last_attack = a[:last_attack]
-            b_last_attack = b[:last_attack]
-            if a_last_attack.nil? && b_last_attack.nil?
-              return 0
-            elsif a_last_attack.nil? && !b_last_attack.nil?
-              return -1
-            elsif !a_last_attack.nil? && b_last_attack.nil?
-              return 1
+            if ::Themis::Finals::Controllers::ScoreboardState.is_enabled
+              ::Themis::Finals::Utils::EventEmitter.emit_all(
+                'scoreboard',
+                data
+              )
             else
-              if a_last_attack < b_last_attack
-                return 1
-              elsif a_last_attack > b_last_attack
-                return -1
-              else
-                return 0
-              end
+              ::Themis::Finals::Utils::EventEmitter.emit(
+                'scoreboard',
+                data,
+                true,
+                false,
+                false
+              )
             end
           end
-
-          if a_total_relative < b_total_relative
-            return 1
-          else
-            return -1
-          end
-        end
-
-        def self.get_team_positions
-          positions = ::Themis::Finals::Models::Team.all.map do |team|
-            last_attack = ::Themis::Finals::Models::Attack.last(
-              team_id: team.id,
-              considered: true
-            )
-
-            last_score = ::Themis::Finals::Models::TotalScore.first(
-              team_id: team.id
-            )
-
-            {
-              team_id: team.id,
-              defence_points: \
-                if last_score.nil?
-                  ::BigDecimal.new('0')
-                else
-                  last_score.defence_points
-                end,
-              attack_points: \
-                if last_score.nil?
-                  ::BigDecimal.new('0')
-                else
-                  last_score.attack_points
-                end,
-              last_attack: last_attack.nil? ? nil : last_attack.occured_at
-            }
-          end
-
-          leader_defence = positions.max_by { |x| x[:defence_points] }
-          max_defence = leader_defence[:defence_points]
-
-          leader_attack = positions.max_by { |x| x[:attack_points] }
-          max_attack = leader_attack[:attack_points]
-
-          precision = ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
-          zero_edge = ::BigDecimal.new(10 ** -(precision + 1), precision + 1)
-
-          positions.map! do |position|
-            position[:attack_relative] = \
-              if max_attack < zero_edge
-                ::BigDecimal.new('0')
-              else
-                (position[:attack_points] / max_attack).round(precision)
-              end
-            position[:defence_relative] = \
-              if max_defence < zero_edge
-                ::BigDecimal.new('0')
-              else
-                (position[:defence_points] / max_defence).round(precision)
-              end
-
-            position[:total_relative] = \
-              (::BigDecimal.new('0.5') *
-               (position[:attack_relative] + position[:defence_relative])
-              ).round(precision)
-
-            position
-          end
-
-          positions.sort! { |a, b| sort_rows(a, b, precision) }
         end
 
         def self.update_team_service_state(team, service, status)
