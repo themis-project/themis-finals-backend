@@ -29,7 +29,7 @@ module Themis
 
         disable :run
 
-        get '/identity' do
+        get '/api/identity' do
           remote_ip = ::IP.new request.ip
           identity = nil
 
@@ -53,17 +53,17 @@ module Themis
           json identity
         end
 
-        get '/contest/round' do
+        get '/api/contest/round' do
           round = ::Themis::Finals::Models::Round.count
           json(value: (round == 0) ? nil : round)
         end
 
-        get '/contest/state' do
+        get '/api/contest/state' do
           state = ::Themis::Finals::Models::ContestState.last
           json(value: state.nil? ? nil : state.state)
         end
 
-        get '/scoreboard' do
+        get '/api/scoreboard' do
           remote_ip = ::IP.new request.ip
           is_internal = \
             ::Themis::Finals::Controllers::IdentityController.is_internal(
@@ -89,7 +89,7 @@ module Themis
           )
         end
 
-        get '/third-party/ctftime' do
+        get '/api/third-party/ctftime' do
           remote_ip = ::IP.new request.ip
           is_internal = \
             ::Themis::Finals::Controllers::IdentityController.is_internal(
@@ -114,7 +114,7 @@ module Themis
           )
         end
 
-        get '/teams' do
+        get '/api/teams' do
           json ::Themis::Finals::Models::Team.map { |team|
             {
               id: team.id,
@@ -124,7 +124,7 @@ module Themis
           }
         end
 
-        get '/services' do
+        get '/api/services' do
           json ::Themis::Finals::Models::Service.map { |service|
             {
               id: service.id,
@@ -133,7 +133,7 @@ module Themis
           }
         end
 
-        get '/posts' do
+        get '/api/posts' do
           json ::Themis::Finals::Models::Post.map { |post|
             {
               id: post.id,
@@ -145,7 +145,7 @@ module Themis
           }
         end
 
-        post '/post' do
+        post '/api/post' do
           unless request.content_type == 'application/json'
             halt 400
           end
@@ -197,7 +197,7 @@ module Themis
           body ''
         end
 
-        delete %r{^/post/(\d+)$} do |post_id_str|
+        delete %r{^/api/post/(\d+)$} do |post_id_str|
           remote_ip = ::IP.new request.ip
 
           unless ::Themis::Finals::Controllers::IdentityController.is_internal(
@@ -223,7 +223,7 @@ module Themis
           body ''
         end
 
-        put %r{^/post/(\d+)$} do |post_id_str|
+        put %r{^/api/post/(\d+)$} do |post_id_str|
           unless request.content_type == 'application/json'
             halt 400
           end
@@ -277,7 +277,7 @@ module Themis
           body ''
         end
 
-        get '/team/services' do
+        get '/api/team/services' do
           json ::Themis::Finals::Models::TeamServiceState.map { |team_service_state|
             {
               id: team_service_state.id,
@@ -289,12 +289,12 @@ module Themis
           }
         end
 
-        get %r{^/team/pictures/(\d{1,2})$} do |team_id_str|
+        get %r{^/api/team/pictures/(\d{1,2})$} do |team_id_str|
           team_id = team_id_str.to_i
           team = ::Themis::Finals::Models::Team[team_id]
           halt 404 if team.nil?
 
-          filename = ::File.join ENV['TEAM_LOGOS_DIR'], "#{team.alias}.png"
+          filename = ::File.join ENV['THEMIS_FINALS_TEAM_LOGO_DIR'], "#{team.alias}.png"
           unless ::File.exist? filename
             filename = ::File.join ::Dir.pwd, 'pictures', '__default.png'
           end
@@ -302,7 +302,7 @@ module Themis
           send_file filename
         end
 
-        post '/submit' do
+        post '/api/submit' do
           unless request.content_type == 'application/json'
             halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
           end
@@ -359,7 +359,7 @@ module Themis
           json r
         end
 
-        post '/checker/v1/report_push' do
+        post '/api/checker/v1/report_push' do
           unless request.content_type == 'application/json'
             halt 400
           end
@@ -399,7 +399,7 @@ module Themis
           body ''
         end
 
-        post '/checker/v1/report_pull' do
+        post '/api/checker/v1/report_pull' do
           unless request.content_type == 'application/json'
             halt 400
           end

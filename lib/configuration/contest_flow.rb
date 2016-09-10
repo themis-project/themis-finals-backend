@@ -16,8 +16,7 @@ module Themis
       class ContestFlow
         attr_accessor :flag_lifetime, :push_period,
                       :poll_period, :poll_count, :update_period,
-                      :attack_limit_attempts, :attack_limit_period,
-                      :generator_secret
+                      :attack_limit_attempts, :attack_limit_period
 
         def initialize
           @flag_lifetime = nil
@@ -27,7 +26,6 @@ module Themis
           @update_period = nil
           @attack_limit_attempts = nil
           @attack_limit_period = nil
-          @generator_secret = nil
         end
       end
 
@@ -61,11 +59,6 @@ module Themis
         def attack_limits(attempts, period)
           @contest_flow.attack_limit_attempts = attempts
           @contest_flow.attack_limit_period = period
-        end
-
-        def generator_secret(generator_secret)
-          @contest_flow.generator_secret = \
-            ::Base64.urlsafe_decode64 generator_secret
         end
       end
 

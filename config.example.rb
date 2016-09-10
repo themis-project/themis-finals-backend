@@ -14,7 +14,6 @@ module Themis
         poll_count 2  # poll 2 flags at once
         update_period 60  # update scores every 60 seconds
         attack_limits 200, 60  # max 200 attack attempts for the last 60 seconds
-        generator_secret 'Yj9W6vWzGS2pgifUeLz60-gKokzw9wzchUq7_70f664yIkv47YQpeUO0TZV6F57yMAvrkc7KBJ4CJul_tnO1IA=='  # an IV for flag generator
       end
 
       team 'team1' do  # this is an internal alias

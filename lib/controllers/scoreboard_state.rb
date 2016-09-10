@@ -65,7 +65,7 @@ module Themis
               'scoreboard',
               {
                 muted: false,
-                data: formatted_positions
+                positions: formatted_positions
               },
               true,
               false,
@@ -76,7 +76,7 @@ module Themis
               'scoreboard',
               {
                 muted: true,
-                data: formatted_positions
+                positions: formatted_positions
               },
               false,
               true,
