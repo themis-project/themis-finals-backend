@@ -6,6 +6,8 @@ require './lib/utils/logger'
 
 logger = ::Themis::Finals::Utils::Logger.get
 
+::Sidekiq.default_worker_options = { 'retry' => 0 }
+
 ::Sidekiq.configure_server do |config|
   config.redis = {
     url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}/"\

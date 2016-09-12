@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+ssh -nNT -R "$REMOTE_PORT:127.0.0.1:80" "$SERVER_USERNAME@$SERVER_HOSTNAME"
