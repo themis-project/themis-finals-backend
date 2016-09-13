@@ -47,9 +47,9 @@ module Themis
               return 1
             else
               if a_last_attack < b_last_attack
-                return 1
-              elsif a_last_attack > b_last_attack
                 return -1
+              elsif a_last_attack > b_last_attack
+                return 1
               else
                 return 0
               end
