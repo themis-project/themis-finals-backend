@@ -278,31 +278,36 @@ module Themis
             )
             if total_score.nil?
               total_score = ::Themis::Finals::Models::TotalScore.create(
-                defence_points: 0.0,
                 attack_points: 0.0,
+                availability_points: 0.0,
+                defence_points: 0.0,
                 team_id: team.id
               )
             end
 
-            defence_points = 0.0
             attack_points = 0.0
+            availability_points = 0.0
+            defence_points = 0.0
 
             ::Themis::Finals::Models::Score.where(
               team_id: team.id
             ).each do |score|
-              defence_points += score.defence_points
               attack_points += score.attack_points
+              availability_points += score.availability_points
+              defence_points += score.defence_points
             end
 
-            total_score.defence_points = defence_points
             total_score.attack_points = attack_points
+            total_score.availability_points = availability_points
+            total_score.defence_points = defence_points
             total_score.save
 
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info(
                 "Total score of team `#{team.name}` has been recalculated: "\
-                "defence - #{total_score.defence_points} pts, "\
-                "attack - #{total_score.attack_points} pts!"
+                "attack - #{total_score.attack_points} pts, "\
+                "availability - #{total_score.availability_points}, "\
+                "defence - #{total_score.defence_points} pts"\
               )
             end
           end

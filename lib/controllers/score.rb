@@ -12,8 +12,9 @@ module Themis
 
           if score.nil?
             score = ::Themis::Finals::Models::Score.create(
-              defence_points: 0.0,
               attack_points: 0.0,
+              availability_points: 0.0,
+              defence_points: 0.0,
               team_id: team.id,
               round_id: round.id
             )
@@ -42,7 +43,7 @@ module Themis
 
             team = flag.team
             score = get_score flag.round, team
-            score.defence_points += pts
+            score.availability_points += pts
             score.save
           end
         end

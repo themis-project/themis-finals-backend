@@ -14,10 +14,12 @@ module Themis
             {
               team_id: position[:team_id],
               total_relative: position[:total_relative],
-              defence_relative: position[:defence_relative],
-              defence_points: position[:defence_points],
               attack_relative: position[:attack_relative],
               attack_points: position[:attack_points],
+              availability_relative: position[:availability_relative],
+              availability_points: position[:availability_points],
+              defence_relative: position[:defence_relative],
+              defence_points: position[:defence_points],
               last_attack: \
                 if position[:last_attack].nil?
                   nil
@@ -74,27 +76,36 @@ module Themis
 
             {
               team_id: team.id,
-              defence_points: \
-                if last_score.nil?
-                  0.0
-                else
-                  last_score.defence_points
-                end,
               attack_points: \
                 if last_score.nil?
                   0.0
                 else
                   last_score.attack_points
                 end,
+              availability_points: \
+                if last_score.nil?
+                  0.0
+                else
+                  last_score.availability_points
+                end,
+              defence_points: \
+                if last_score.nil?
+                  0.0
+                else
+                  last_score.defence_points
+                end,
               last_attack: last_attack.nil? ? nil : last_attack.occured_at
             }
           end
 
-          leader_defence = positions.max_by { |x| x[:defence_points] }
-          max_defence = leader_defence[:defence_points]
-
           leader_attack = positions.max_by { |x| x[:attack_points] }
           max_attack = leader_attack[:attack_points]
+
+          leader_availability = positions.max_by { |x| x[:availability_points] }
+          max_availability = leader_availability[:availability_points]
+
+          leader_defence = positions.max_by { |x| x[:defence_points] }
+          max_defence = leader_defence[:defence_points]
 
           precision = ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
           zero_edge = (10 ** -(precision + 1)).to_f
@@ -106,6 +117,12 @@ module Themis
               else
                 position[:attack_points] / max_attack
               end
+            position[:availability_relative] = \
+              if max_availability < zero_edge
+                0.0
+              else
+                position[:availability_points] / max_availability
+              end
             position[:defence_relative] = \
               if max_defence < zero_edge
                 0.0
@@ -114,9 +131,11 @@ module Themis
               end
 
             position[:total_relative] = \
-              (0.5 *
-               (position[:attack_relative] + position[:defence_relative])
-              )
+              (
+                position[:attack_relative] +
+                position[:availability_relative] +
+                position[:defence_relative]
+              ) / 3
 
             position
           end
