@@ -108,9 +108,11 @@ module Themis
               flag.expired_at = expires.to_datetime
               flag.adjunct = adjunct
               flag.save
-              @logger.info "Successfully pushed flag `#{flag.flag}`!"
 
-              ::Themis::Finals::Queue::Tasks::PullFlag.perform_async flag.flag
+              ::Themis::Finals::Models::DB.after_commit do
+                @logger.info "Successfully pushed flag `#{flag.flag}`!"
+                ::Themis::Finals::Queue::Tasks::PullFlag.perform_async flag.flag
+              end
             else
               @logger.info "Failed to push flag `#{flag.flag}` (status code "\
                            "#{status})!"
