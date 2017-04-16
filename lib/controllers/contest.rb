@@ -118,7 +118,7 @@ module Themis
                            "#{status})!"
             end
 
-            update_team_service_state flag.team, flag.service, status
+            update_team_service_push_state(flag.team, flag.service, status)
           end
         end
 
@@ -247,7 +247,7 @@ module Themis
             poll.save
 
             flag = poll.flag
-            update_team_service_state flag.team, flag.service, status
+            update_team_service_pull_state(flag.team, flag.service, status)
 
             if status == ::Themis::Finals::Checker::Result::UP
               @logger.info "Successfully pulled flag `#{flag.flag}`!"
@@ -416,29 +416,28 @@ module Themis
           end
         end
 
-        def self.update_team_service_state(team, service, status)
-          ::Themis::Finals::Models::DB.transaction do
-            case status
-            when ::Themis::Finals::Checker::Result::UP
-              service_state = ::Themis::Finals::Constants::TeamServiceState::UP
-            when ::Themis::Finals::Checker::Result::CORRUPT
-              service_state = \
-                ::Themis::Finals::Constants::TeamServiceState::CORRUPT
-            when ::Themis::Finals::Checker::Result::MUMBLE
-              service_state = \
-                ::Themis::Finals::Constants::TeamServiceState::MUMBLE
-            when ::Themis::Finals::Checker::Result::DOWN
-              service_state = \
-                ::Themis::Finals::Constants::TeamServiceState::DOWN
-            when ::Themis::Finals::Checker::Result::INTERNAL_ERROR
-              service_state = \
-                ::Themis::Finals::Constants::TeamServiceState::INTERNAL_ERROR
-            else
-              service_state = \
-                ::Themis::Finals::Constants::TeamServiceState::NOT_AVAILABLE
-            end
+        def self.get_service_state(status)
+          case status
+          when ::Themis::Finals::Checker::Result::UP
+            ::Themis::Finals::Constants::TeamServiceState::UP
+          when ::Themis::Finals::Checker::Result::CORRUPT
+            ::Themis::Finals::Constants::TeamServiceState::CORRUPT
+          when ::Themis::Finals::Checker::Result::MUMBLE
+            ::Themis::Finals::Constants::TeamServiceState::MUMBLE
+          when ::Themis::Finals::Checker::Result::DOWN
+            ::Themis::Finals::Constants::TeamServiceState::DOWN
+          when ::Themis::Finals::Checker::Result::INTERNAL_ERROR
+            ::Themis::Finals::Constants::TeamServiceState::INTERNAL_ERROR
+          else
+            ::Themis::Finals::Constants::TeamServiceState::NOT_AVAILABLE
+          end
+        end
 
-            ::Themis::Finals::Models::TeamServiceHistoryState.create(
+        def self.update_team_service_push_state(team, service, status)
+          ::Themis::Finals::Models::DB.transaction do
+            service_state = get_service_state(status)
+
+            ::Themis::Finals::Models::TeamServicePushHistoryState.create(
               state: service_state,
               created_at: ::DateTime.now,
               team_id: team.id,
@@ -446,14 +445,14 @@ module Themis
             )
 
             team_service_state = \
-              ::Themis::Finals::Models::TeamServiceState.first(
+              ::Themis::Finals::Models::TeamServicePushState.first(
                 service_id: service.id,
                 team_id: team.id
               )
 
             if team_service_state.nil?
               team_service_state = \
-                ::Themis::Finals::Models::TeamServiceState.create(
+                ::Themis::Finals::Models::TeamServicePushState.create(
                   state: service_state,
                   created_at: ::DateTime.now,
                   updated_at: ::DateTime.now,
@@ -467,7 +466,7 @@ module Themis
             end
 
             ::Themis::Finals::Utils::EventEmitter.emit_all(
-              'team/service',
+              'team/service/push-state',
               id: team_service_state.id,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
@@ -476,7 +475,57 @@ module Themis
             )
 
             ::Themis::Finals::Utils::EventEmitter.emit_log(
-              3,
+              31,
+              team_id: team_service_state.team_id,
+              service_id: team_service_state.service_id,
+              state: team_service_state.state
+            )
+          end
+        end
+
+        def self.update_team_service_pull_state(team, service, status)
+          ::Themis::Finals::Models::DB.transaction do
+            service_state = get_service_state(status)
+
+            ::Themis::Finals::Models::TeamServicePullHistoryState.create(
+              state: service_state,
+              created_at: ::DateTime.now,
+              team_id: team.id,
+              service_id: service.id
+            )
+
+            team_service_state = \
+              ::Themis::Finals::Models::TeamServicePullState.first(
+                service_id: service.id,
+                team_id: team.id
+              )
+
+            if team_service_state.nil?
+              team_service_state = \
+                ::Themis::Finals::Models::TeamServicePullState.create(
+                  state: service_state,
+                  created_at: ::DateTime.now,
+                  updated_at: ::DateTime.now,
+                  team_id: team.id,
+                  service_id: service.id
+                )
+            else
+              team_service_state.state = service_state
+              team_service_state.updated_at = ::DateTime.now
+              team_service_state.save
+            end
+
+            ::Themis::Finals::Utils::EventEmitter.emit_all(
+              'team/service/pull-state',
+              id: team_service_state.id,
+              team_id: team_service_state.team_id,
+              service_id: team_service_state.service_id,
+              state: team_service_state.state,
+              updated_at: team_service_state.updated_at.iso8601
+            )
+
+            ::Themis::Finals::Utils::EventEmitter.emit_log(
+              32,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
               state: team_service_state.state

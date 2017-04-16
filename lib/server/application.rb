@@ -277,8 +277,20 @@ module Themis
           body ''
         end
 
-        get '/api/team/services' do
-          json ::Themis::Finals::Models::TeamServiceState.map { |team_service_state|
+        get '/api/team/service/push-states' do
+          json ::Themis::Finals::Models::TeamServicePushState.map { |team_service_state|
+            {
+              id: team_service_state.id,
+              team_id: team_service_state.team_id,
+              service_id: team_service_state.service_id,
+              state: team_service_state.state,
+              updated_at: team_service_state.updated_at.iso8601
+            }
+          }
+        end
+
+        get '/api/team/service/pull-states' do
+          json ::Themis::Finals::Models::TeamServicePullState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,

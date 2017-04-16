@@ -1,6 +1,5 @@
 require 'themis/finals/attack/result'
 require './lib/utils/event_emitter'
-require './lib/constants/team_service_state'
 
 module Themis
   module Finals
@@ -91,13 +90,21 @@ module Themis
             return r
           end
 
-          team_service_state = ::Themis::Finals::Models::TeamServiceState.first(
+          team_service_push_state = ::Themis::Finals::Models::TeamServicePushState.first(
             team_id: team.id,
             service_id: flag.service_id
           )
+          team_service_push_ok = \
+            !team_service_push_state.nil? && team_service_push_state.state == ::Themis::Finals::Constants::TeamServiceState::UP
 
-          if team_service_state.nil? ||
-             team_service_state.state != ::Themis::Finals::Constants::TeamServiceState::UP
+          team_service_pull_state = ::Themis::Finals::Models::TeamServicePullState.first(
+            team_id: team.id,
+            service_id: flag.service_id
+          )
+          team_service_pull_ok = \
+            !team_service_pull_state.nil? && team_service_pull_state.state == ::Themis::Finals::Constants::TeamServiceState::UP
+
+          unless team_service_push_ok && team_service_pull_ok
             r = ::Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP
             attempt.response = r
             attempt.save
