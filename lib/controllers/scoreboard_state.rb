@@ -32,7 +32,7 @@ module Themis
               positions: formatted_positions
             }
 
-            ::Themis::Finals::Utils::EventEmitter.emit_all(
+            ::Themis::Finals::Utils::EventEmitter.broadcast(
               'scoreboard',
               data
             )

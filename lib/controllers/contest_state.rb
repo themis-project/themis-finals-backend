@@ -65,7 +65,7 @@ module Themis
               created_at: ::DateTime.now
             )
 
-            ::Themis::Finals::Utils::EventEmitter.emit_all(
+            ::Themis::Finals::Utils::EventEmitter.broadcast(
               'contest/state',
               value: state
             )

@@ -15,7 +15,7 @@ module Themis
               started_at: ::DateTime.now
             )
             round_number = ::Themis::Finals::Models::Round.count
-            ::Themis::Finals::Utils::EventEmitter.emit_all(
+            ::Themis::Finals::Utils::EventEmitter.broadcast(
               'contest/round',
               value: round_number
             )

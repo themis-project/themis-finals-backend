@@ -180,7 +180,7 @@ module Themis
                 updated_at: ::DateTime.now
               )
 
-              ::Themis::Finals::Utils::EventEmitter.emit_all(
+              ::Themis::Finals::Utils::EventEmitter.broadcast(
                 'posts/add',
                 id: post.id,
                 title: post.title,
@@ -213,7 +213,7 @@ module Themis
           ::Themis::Finals::Models::DB.transaction do
             post.destroy
 
-            ::Themis::Finals::Utils::EventEmitter.emit_all(
+            ::Themis::Finals::Utils::EventEmitter.broadcast(
               'posts/remove',
               id: post_id
             )
@@ -260,7 +260,7 @@ module Themis
               post.updated_at = ::DateTime.now
               post.save
 
-              ::Themis::Finals::Utils::EventEmitter.emit_all(
+              ::Themis::Finals::Utils::EventEmitter.broadcast(
                 'posts/edit',
                 id: post.id,
                 title: post.title,
@@ -277,13 +277,67 @@ module Themis
           body ''
         end
 
-        get '/api/team/services' do
-          json ::Themis::Finals::Models::TeamServiceState.map { |team_service_state|
+        get '/api/team/service/push-states' do
+          remote_ip = ::IP.new(request.ip)
+          identity = nil
+
+          identity_team = \
+            ::Themis::Finals::Controllers::IdentityController.is_team(remote_ip)
+          unless identity_team.nil?
+            identity = { name: 'team', id: identity_team.id }
+          end
+
+          if identity.nil? &&
+             ::Themis::Finals::Controllers::IdentityController.is_internal(
+               remote_ip
+             )
+            identity = { name: 'internal' }
+          end
+
+          if identity.nil?
+            identity = { name: 'external' }
+          end
+
+          json ::Themis::Finals::Models::TeamServicePushState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
               state: team_service_state.state,
+              message: (identity[:name] == 'internal' || (identity[:name] == 'team' && identity[:id] == team_service_state.team_id)) ? team_service_state.message : nil,
+              updated_at: team_service_state.updated_at.iso8601
+            }
+          }
+        end
+
+        get '/api/team/service/pull-states' do
+          remote_ip = ::IP.new(request.ip)
+          identity = nil
+
+          identity_team = \
+            ::Themis::Finals::Controllers::IdentityController.is_team(remote_ip)
+          unless identity_team.nil?
+            identity = { name: 'team', id: identity_team.id }
+          end
+
+          if identity.nil? &&
+             ::Themis::Finals::Controllers::IdentityController.is_internal(
+               remote_ip
+             )
+            identity = { name: 'internal' }
+          end
+
+          if identity.nil?
+            identity = { name: 'external' }
+          end
+
+          json ::Themis::Finals::Models::TeamServicePullState.map { |team_service_state|
+            {
+              id: team_service_state.id,
+              team_id: team_service_state.team_id,
+              service_id: team_service_state.service_id,
+              state: team_service_state.state,
+              message: (identity[:name] == 'internal' || (identity[:name] == 'team' && identity[:id] == team_service_state.team_id)) ? team_service_state.message : nil,
               updated_at: team_service_state.updated_at.iso8601
             }
           }
@@ -388,7 +442,8 @@ module Themis
               ::Themis::Finals::Controllers::Contest.handle_push(
                 flag,
                 payload['status'],
-                ::Base64.urlsafe_decode64(payload['adjunct'])
+                ::Base64.urlsafe_decode64(payload['label']),
+                payload['message']
               )
             end
           rescue => e
@@ -427,7 +482,8 @@ module Themis
             else
               ::Themis::Finals::Controllers::Contest.handle_poll(
                 poll,
-                payload['status']
+                payload['status'],
+                payload['message']
               )
             end
           rescue => e

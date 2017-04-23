@@ -7,7 +7,7 @@
       DateTime :pushed_at, null: true
       DateTime :expired_at, null: true
       DateTime :considered_at, null: true
-      File :adjunct, null: false
+      File :label, null: false
 
       foreign_key :team_id, :teams, index: true, null: false
       foreign_key :service_id, :services, index: true, null: false
