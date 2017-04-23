@@ -304,7 +304,7 @@ module Themis
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
               state: team_service_state.state,
-              message: (identity[:name] == 'external' || (identity[:name] == 'team' && identity[:id] == team_service_state.team_id)) ? team_service_state.message : nil,
+              message: (identity[:name] == 'internal' || (identity[:name] == 'team' && identity[:id] == team_service_state.team_id)) ? team_service_state.message : nil,
               updated_at: team_service_state.updated_at.iso8601
             }
           }
@@ -337,7 +337,7 @@ module Themis
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
               state: team_service_state.state,
-              message: (identity[:name] == 'external' || (identity[:name] == 'team' && identity[:id] == team_service_state.team_id)) ? team_service_state.message : nil,
+              message: (identity[:name] == 'internal' || (identity[:name] == 'team' && identity[:id] == team_service_state.team_id)) ? team_service_state.message : nil,
               updated_at: team_service_state.updated_at.iso8601
             }
           }
