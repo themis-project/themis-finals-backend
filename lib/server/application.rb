@@ -29,6 +29,11 @@ module Themis
 
         disable :run
 
+        get '/api/public_key' do
+          content_type :text
+          ::ENV.fetch('THEMIS_FINALS_FLAG_SIGN_KEY_PUBLIC', '').gsub('\n', "\n")
+        end
+
         get '/api/identity' do
           remote_ip = ::IP.new request.ip
           identity = nil
