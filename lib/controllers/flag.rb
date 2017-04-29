@@ -23,7 +23,7 @@ module Themis
                 expired_at: nil,
                 considered_at: nil,
                 label: label,
-                capsule: encode(flag, created)
+                capsule: encode(flag, created),
                 service_id: service.id,
                 team_id: team.id,
                 round_id: round.id
