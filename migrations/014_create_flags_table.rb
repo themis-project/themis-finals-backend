@@ -8,6 +8,7 @@
       DateTime :expired_at, null: true
       DateTime :considered_at, null: true
       File :label, null: false
+      String :capsule, text: true, null: false
 
       foreign_key :team_id, :teams, index: true, null: false
       foreign_key :service_id, :services, index: true, null: false

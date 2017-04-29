@@ -15,13 +15,15 @@ module Themis
 
           ::Themis::Finals::Models::DB.transaction do
               flag, label = ::Themis::Finals::Utils::FlagGenerator.generate_flag
+              created = ::DateTime.now
               flag_model = ::Themis::Finals::Models::Flag.create(
                 flag: flag,
-                created_at: ::DateTime.now,
+                created_at: created,
                 pushed_at: nil,
                 expired_at: nil,
                 considered_at: nil,
                 label: label,
+                capsule: encode(flag, created)
                 service_id: service.id,
                 team_id: team.id,
                 round_id: round.id
@@ -31,11 +33,11 @@ module Themis
           flag_model
         end
 
-        def self.encode(flag_model)
+        def self.encode(flag, created)
           key = ::OpenSSL::PKey.read(::ENV['THEMIS_FINALS_FLAG_SIGN_KEY_PRIVATE'].gsub('\n', "\n"))
           payload = {
-            'flag' => flag_model.flag,
-            'created' => flag_model.created_at.iso8601
+            'flag' => flag,
+            'created' => created.iso8601
           }
           alg = 'none'
           if key.class == ::OpenSSL::PKey::RSA

@@ -50,7 +50,7 @@ module Themis
                 job_data = {
                   params: {
                     endpoint: team.host,
-                    capsule: ::Themis::Finals::Controllers::Flag.encode(flag_model),
+                    capsule: flag_model.capsule,
                     label: ::Base64.urlsafe_encode64(flag_model.label)
                   },
                   metadata: {
@@ -158,7 +158,7 @@ module Themis
                   params: {
                     request_id: poll.id,
                     endpoint: team.host,
-                    capsule: ::Themis::Finals::Controllers::Flag.encode(flag_model),
+                    capsule: flag_model.capsule,
                     label: ::Base64.urlsafe_encode64(flag_model.label)
                   },
                   metadata: {
