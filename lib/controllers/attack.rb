@@ -62,8 +62,8 @@ module Themis
             return r
           end
 
-          match = data.match /^[\da-f]{32}=$/
-          if match.nil?
+          match_ = data.match /^[\da-f]{32}=$/
+          if match_.nil?
             r = ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
             attempt.response = r
             attempt.save
@@ -73,7 +73,7 @@ module Themis
           flag = ::Themis::Finals::Models::Flag.exclude(
             pushed_at: nil
           ).where(
-            flag: match[0]
+            flag: match_[0]
           ).first
 
           if flag.nil?
