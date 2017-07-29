@@ -15,6 +15,7 @@ require './lib/controllers/scoreboard'
 require 'base64'
 require 'net/http'
 require './lib/queue/tasks'
+require 'ip'
 
 module Themis
   module Finals
@@ -45,11 +46,12 @@ module Themis
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info "Pushing flag `#{flag_model.flag}` to service "\
                            "`#{service.name}` of `#{team.name}` ..."
+              endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
               case service.protocol
               when ::Themis::Finals::Constants::Protocol::REST_BASIC
                 job_data = {
                   params: {
-                    endpoint: team.host,
+                    endpoint: endpoint_addr.to_s,
                     capsule: flag_model.capsule,
                     label: ::Base64.urlsafe_encode64(flag_model.label)
                   },
@@ -152,12 +154,13 @@ module Themis
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info "Polling flag `#{flag_model.flag}` from service "\
                            "`#{service.name}` of `#{team.name}` ..."
+              endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
               case service.protocol
               when ::Themis::Finals::Constants::Protocol::REST_BASIC
                 job_data = {
                   params: {
                     request_id: poll.id,
-                    endpoint: team.host,
+                    endpoint: endpoint_addr.to_s,
                     capsule: flag_model.capsule,
                     label: ::Base64.urlsafe_encode64(flag_model.label)
                   },

@@ -19,19 +19,16 @@ module Themis
       team 'team1' do  # this is an internal alias
         name 'Team #1'  # team displayed name
         network '172.20.1.0/24'  # team network
-        host '172.20.1.3'  # game box address
       end
 
       team 'team2' do
         name 'Team #2'
         network '172.20.2.0/24'
-        host '172.20.2.3'
       end
 
       team 'team3' do
         name 'Team #3'
         network '172.20.3.0/24'
-        host '172.20.3.3'
       end
       # and so on for teams
 
@@ -40,6 +37,7 @@ module Themis
 
         name 'Service #1'  # service displayed name
         protocol 2
+        hostmask '0.0.0.3'
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
 
@@ -48,6 +46,7 @@ module Themis
 
         name 'Service #2'  # service displayed name
         protocol 2
+        hostmask '0.0.0.3'
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
 
@@ -56,6 +55,7 @@ module Themis
 
         name 'Service #3'  # service displayed name
         protocol 2
+        hostmask '0.0.0.3'
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
       # and so on for services

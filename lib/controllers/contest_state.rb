@@ -14,7 +14,6 @@ module Themis
                 name: team_opts.name,
                 alias: team_opts.alias,
                 network: team_opts.network,
-                host: team_opts.host,
                 guest: team_opts.guest
               )
             end
@@ -24,6 +23,7 @@ module Themis
                 name: service_opts.name,
                 alias: service_opts.alias,
                 protocol: service_opts.protocol,
+                hostmask: service_opts.hostmask,
                 metadata: service_opts.metadata
               )
             end

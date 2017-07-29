@@ -12,13 +12,12 @@ module Themis
       end
 
       class Team
-        attr_accessor :alias, :name, :network, :host, :guest
+        attr_accessor :alias, :name, :network, :guest
 
         def initialize(team_alias)
           @alias = team_alias
           @name = name
           @network = nil
-          @host = nil
           @guest = false
         end
       end
@@ -36,10 +35,6 @@ module Themis
 
         def network(network)
           @team.network = network
-        end
-
-        def host(host)
-          @team.host = host
         end
 
         def guest(guest)
