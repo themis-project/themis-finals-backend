@@ -22,7 +22,6 @@ module Themis
               ::Themis::Finals::Models::Service.create(
                 name: service_opts.name,
                 alias: service_opts.alias,
-                protocol: service_opts.protocol,
                 hostmask: service_opts.hostmask,
                 metadata: service_opts.metadata
               )

@@ -36,7 +36,6 @@ module Themis
         base_url = 'http://service1.checker.finals.themis-project.com'
 
         name 'Service #1'  # service displayed name
-        protocol 2
         hostmask '0.0.0.3'
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
@@ -45,7 +44,6 @@ module Themis
         base_url = 'http://service2.checker.finals.themis-project.com'
 
         name 'Service #2'  # service displayed name
-        protocol 2
         hostmask '0.0.0.3'
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end
@@ -54,7 +52,6 @@ module Themis
         base_url = 'http://service3.checker.finals.themis-project.com'
 
         name 'Service #3'  # service displayed name
-        protocol 2
         hostmask '0.0.0.3'
         metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
       end

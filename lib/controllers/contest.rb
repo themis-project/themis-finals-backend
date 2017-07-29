@@ -9,7 +9,6 @@ require './lib/controllers/attack'
 require './lib/controllers/scoreboard_state'
 require './lib/constants/flag_poll_state'
 require './lib/constants/team_service_state'
-require './lib/constants/protocol'
 require './lib/controllers/token'
 require './lib/controllers/scoreboard'
 require 'base64'
@@ -47,39 +46,34 @@ module Themis
               @logger.info "Pushing flag `#{flag_model.flag}` to service "\
                            "`#{service.name}` of `#{team.name}` ..."
               endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
-              case service.protocol
-              when ::Themis::Finals::Constants::Protocol::REST_BASIC
-                job_data = {
-                  params: {
-                    endpoint: endpoint_addr.to_s,
-                    capsule: flag_model.capsule,
-                    label: ::Base64.urlsafe_encode64(flag_model.label)
-                  },
-                  metadata: {
-                    timestamp: ::DateTime.now.to_s,
-                    round: round_number,
-                    team_name: team.name,
-                    service_name: service.name
-                  },
-                  report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v1/report_push"
-                }.to_json
+              job_data = {
+                params: {
+                  endpoint: endpoint_addr.to_s,
+                  capsule: flag_model.capsule,
+                  label: ::Base64.urlsafe_encode64(flag_model.label)
+                },
+                metadata: {
+                  timestamp: ::DateTime.now.to_s,
+                  round: round_number,
+                  team_name: team.name,
+                  service_name: service.name
+                },
+                report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v1/report_push"
+              }.to_json
 
-                uri = URI(service.metadata['push_url'])
+              uri = URI(service.metadata['push_url'])
 
-                req = ::Net::HTTP::Post.new(uri)
-                req.body = job_data
-                req.content_type = 'application/json'
-                req[ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER']] = \
-                  ::Themis::Finals::Controllers::Token.issue_master_token
+              req = ::Net::HTTP::Post.new(uri)
+              req.body = job_data
+              req.content_type = 'application/json'
+              req[ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER']] = \
+                ::Themis::Finals::Controllers::Token.issue_master_token
 
-                res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
-                  http.request(req)
-                end
-
-                @logger.info res.value
-              else
-                @logger.error 'Not implemented'
+              res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
+                http.request(req)
               end
+
+              @logger.info res.value
             end
           end
         end
@@ -155,40 +149,35 @@ module Themis
               @logger.info "Polling flag `#{flag_model.flag}` from service "\
                            "`#{service.name}` of `#{team.name}` ..."
               endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
-              case service.protocol
-              when ::Themis::Finals::Constants::Protocol::REST_BASIC
-                job_data = {
-                  params: {
-                    request_id: poll.id,
-                    endpoint: endpoint_addr.to_s,
-                    capsule: flag_model.capsule,
-                    label: ::Base64.urlsafe_encode64(flag_model.label)
-                  },
-                  metadata: {
-                    timestamp: ::DateTime.now.to_s,
-                    round: round_number,
-                    team_name: team.name,
-                    service_name: service.name
-                  },
-                  report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v1/report_pull"
-                }.to_json
+              job_data = {
+                params: {
+                  request_id: poll.id,
+                  endpoint: endpoint_addr.to_s,
+                  capsule: flag_model.capsule,
+                  label: ::Base64.urlsafe_encode64(flag_model.label)
+                },
+                metadata: {
+                  timestamp: ::DateTime.now.to_s,
+                  round: round_number,
+                  team_name: team.name,
+                  service_name: service.name
+                },
+                report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v1/report_pull"
+              }.to_json
 
-                uri = URI(service.metadata['pull_url'])
+              uri = URI(service.metadata['pull_url'])
 
-                req = ::Net::HTTP::Post.new(uri)
-                req.body = job_data
-                req.content_type = 'application/json'
-                req[ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER']] = \
-                  ::Themis::Finals::Controllers::Token.issue_master_token
+              req = ::Net::HTTP::Post.new(uri)
+              req.body = job_data
+              req.content_type = 'application/json'
+              req[ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER']] = \
+                ::Themis::Finals::Controllers::Token.issue_master_token
 
-                res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
-                  http.request(req)
-                end
-
-                @logger.info res.value
-              else
-                @logger.error 'Not implemented'
+              res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|
+                http.request(req)
               end
+
+              @logger.info res.value
             end
           end
         end
