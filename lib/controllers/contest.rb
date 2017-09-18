@@ -349,8 +349,10 @@ module Themis
               error_count = polls.count do |poll|
                 poll.state == ::Themis::Finals::Constants::FlagPollState::ERROR
               end
-              # if error_count == 0 && polls.count > 0
-              if error_count == 0
+              success_count = polls.count do |poll|
+                poll.state == ::Themis::Finals::Constants::FlagPollState::SUCCESS
+              end
+              if error_count == 0 && success_count > 0
                 ::Themis::Finals::Controllers::Score.charge_defence(flag)
               end
             else
