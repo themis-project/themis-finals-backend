@@ -35,10 +35,7 @@ module Themis
 
         def self.encode(flag, created)
           key = ::OpenSSL::PKey.read(::ENV['THEMIS_FINALS_FLAG_SIGN_KEY_PRIVATE'].gsub('\n', "\n"))
-          payload = {
-            'flag' => flag,
-            'created' => created.iso8601
-          }
+          payload = { 'flag' => flag }
           alg = 'none'
           if key.class == ::OpenSSL::PKey::RSA
             alg = 'RS256'

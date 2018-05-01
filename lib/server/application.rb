@@ -9,7 +9,6 @@ require './lib/controllers/attack'
 require './lib/controllers/contest'
 require './lib/utils/event_emitter'
 require './lib/controllers/scoreboard_state'
-require './lib/controllers/token'
 require './lib/server/rack_monkey_patch'
 require './lib/models/init'
 require './lib/controllers/scoreboard'
@@ -418,15 +417,10 @@ module Themis
           json r
         end
 
-        post '/api/checker/v1/report_push' do
+        post '/api/checker/v2/report_push' do
           unless request.content_type == 'application/json'
             halt 400
           end
-
-          header_name = "HTTP_#{ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER'].upcase.gsub('-', '_')}"
-          auth_token = request.env[header_name]
-
-          halt 401 unless ::Themis::Finals::Controllers::Token.verify_checker_token(auth_token)
 
           payload = nil
 
@@ -459,15 +453,10 @@ module Themis
           body ''
         end
 
-        post '/api/checker/v1/report_pull' do
+        post '/api/checker/v2/report_pull' do
           unless request.content_type == 'application/json'
             halt 400
           end
-
-          header_name = "HTTP_#{ENV['THEMIS_FINALS_AUTH_TOKEN_HEADER'].upcase.gsub('-', '_')}"
-          auth_token = request.env[header_name]
-
-          halt 401 unless ::Themis::Finals::Controllers::Token.verify_checker_token(auth_token)
 
           payload = nil
 
