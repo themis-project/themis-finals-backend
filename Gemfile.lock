@@ -24,8 +24,8 @@ GEM
       rack
     rack-test (0.6.3)
       rack (>= 1.0)
-    rake (11.2.2)
-    redis (3.3.0)
+    rake (12.3.1)
+    redis (3.3.5)
     ruby-enum (0.5.0)
       i18n
     ruby-ip (0.9.3)
@@ -93,4 +93,4 @@ DEPENDENCIES
   time_difference
 
 BUNDLED WITH
-   1.15.4
+   1.16.1
