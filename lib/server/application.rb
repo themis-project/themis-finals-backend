@@ -360,6 +360,68 @@ module Themis
           send_file filename
         end
 
+        post '/api/flag/v1/submit' do
+          content_type :text
+          unless request.content_type == 'text/plain'
+            halt 400, ::Themis::Finals::Attack::Result.key(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT).to_s
+          end
+
+          remote_ip = ::IP.new request.ip
+
+          team = ::Themis::Finals::Controllers::IdentityController.is_team(
+            remote_ip
+          )
+          if team.nil?
+            halt 400, ::Themis::Finals::Attack::Result.key(::Themis::Finals::Attack::Result::ERR_INVALID_IDENTITY).to_s
+          end
+
+          payload = nil
+
+          begin
+            request.body.rewind
+            flag_str = request.body.read
+          rescue => e
+            halt 400, ::Themis::Finals::Attack::Result.key(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT).to_s
+          end
+
+          state = ::Themis::Finals::Models::ContestState.last
+          if state.nil? || state.is_initial || state.is_await_start
+            halt 400, ::Themis::Finals::Attack::Result.key(::Themis::Finals::Attack::Result::ERR_CONTEST_NOT_STARTED).to_s
+          end
+
+          if state.is_paused
+            halt 400, ::Themis::Finals::Attack::Result.key(::Themis::Finals::Attack::Result::ERR_CONTEST_PAUSED).to_s
+          end
+
+          if state.is_completed
+            halt 400, ::Themis::Finals::Attack::Result.key(::Themis::Finals::Attack::Result::ERR_CONTEST_COMPLETED).to_s
+          end
+
+          r = ::Themis::Finals::Controllers::Attack.process(team, flag_str)
+          ::Themis::Finals::Attack::Result.key(r).to_s
+        end
+
+        get %r{^/api/flag/v1/info/([\da-f]{32}=)$} do |flag_str|
+          flag_obj = ::Themis::Finals::Models::Flag.exclude(
+            pushed_at: nil
+          ).where(
+            flag: flag_str
+          ).first
+
+          halt 404 if flag_obj.nil?
+
+          r = {
+            flag: flag_obj.flag,
+            nbf: flag_obj.pushed_at.iso8601,
+            exp: flag_obj.expired_at.iso8601,
+            round: flag_obj.round_id,
+            team: flag_obj.team.name,
+            service: flag_obj.service.name
+          }
+
+          json r
+        end
+
         post '/api/submit' do
           unless request.content_type == 'application/json'
             halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
