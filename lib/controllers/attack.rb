@@ -26,43 +26,15 @@ module Themis
           attack.save
         end
 
-        def self.process(team, data)
-          attempt = ::Themis::Finals::Models::AttackAttempt.create(
-            occured_at: ::DateTime.now,
-            request: data.to_s,
-            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
-            team_id: team.id
-          )
-
-          threshold =
-            ::Time.now -
-            ::Themis::Finals::Configuration.get_contest_flow.attack_limit_period
-
-          attempt_count = ::Themis::Finals::Models::AttackAttempt.where(
-            team: team
-          ).where(
-            'occured_at >= ?',
-            threshold.to_datetime
-          ).count
-
-          limit_attempts = \
-            ::Themis::Finals::Configuration.get_contest_flow.attack_limit_attempts
-
-          if attempt_count > limit_attempts
-            r = ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT
-            attempt.response = r
-            attempt.save
-            return r
-          end
-
-          unless data.respond_to? 'match'
+        def self.internal_process(attempt, team, data)
+          unless data.respond_to?('match')
             r = ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
             attempt.response = r
             attempt.save
             return r
           end
 
-          match_ = data.match /^[\da-f]{32}=$/
+          match_ = data.match(/^[\da-f]{32}=$/)
           if match_.nil?
             r = ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
             attempt.response = r
@@ -143,6 +115,52 @@ module Themis
           attempt.response = r
           attempt.save
           return r
+        end
+
+        def self.process(team, data)
+          attempt = ::Themis::Finals::Models::AttackAttempt.create(
+            occured_at: ::DateTime.now,
+            request: data.to_s,
+            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
+            team_id: team.id,
+            deprecated_api: false
+          )
+
+          internal_process(attempt, team, data)
+        end
+
+        def self.process_deprecated(team, data)
+          attempt = ::Themis::Finals::Models::AttackAttempt.create(
+            occured_at: ::DateTime.now,
+            request: data.to_s,
+            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
+            team_id: team.id,
+            deprecated_api: true
+          )
+
+          threshold =
+            ::Time.now -
+            ::Themis::Finals::Configuration.get_contest_flow.attack_limit_period
+
+          attempt_count = ::Themis::Finals::Models::AttackAttempt.where(
+            team: team,
+            deprecated_api: true
+          ).where(
+            'occured_at >= ?',
+            threshold.to_datetime
+          ).count
+
+          limit_attempts = \
+            ::Themis::Finals::Configuration.get_contest_flow.attack_limit_attempts
+
+          if attempt_count > limit_attempts
+            r = ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT
+            attempt.response = r
+            attempt.save
+            return r
+          end
+
+          internal_process(attempt, team, data)
         end
       end
     end

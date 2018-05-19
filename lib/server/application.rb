@@ -469,7 +469,7 @@ module Themis
           end
 
           r = payload.map do |flag|
-            ::Themis::Finals::Controllers::Attack.process team, flag
+            ::Themis::Finals::Controllers::Attack.process_deprecated(team, flag)
           end
 
           if r.count == 0
