@@ -1,5 +1,6 @@
 require 'themis/finals/attack/result'
 require './lib/utils/event_emitter'
+require './lib/constants/submit_result'
 
 module Themis
   module Finals
@@ -27,8 +28,14 @@ module Themis
         end
 
         def self.internal_process(attempt, team, data)
+          old_code = attempt.deprecated_api
+
           unless data.respond_to?('match')
-            r = ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
+            end
             attempt.response = r
             attempt.save
             return r
@@ -36,7 +43,11 @@ module Themis
 
           match_ = data.match(/^[\da-f]{32}=$/)
           if match_.nil?
-            r = ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
+            end
             attempt.response = r
             attempt.save
             return r
@@ -49,14 +60,22 @@ module Themis
           ).first
 
           if flag.nil?
-            r = ::Themis::Finals::Attack::Result::ERR_FLAG_NOT_FOUND
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_FLAG_NOT_FOUND
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_NOT_FOUND
+            end
             attempt.response = r
             attempt.save
             return r
           end
 
           if flag.team_id == team.id
-            r = ::Themis::Finals::Attack::Result::ERR_FLAG_YOURS
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_FLAG_YOURS
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_YOUR_OWN
+            end
             attempt.response = r
             attempt.save
             return r
@@ -77,14 +96,22 @@ module Themis
             !team_service_pull_state.nil? && team_service_pull_state.state == ::Themis::Finals::Constants::TeamServiceState::UP
 
           unless team_service_push_ok && team_service_pull_ok
-            r = ::Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID
+            end
             attempt.response = r
             attempt.save
             return r
           end
 
           if flag.expired_at.to_datetime < ::DateTime.now
-            r = ::Themis::Finals::Attack::Result::ERR_FLAG_EXPIRED
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_FLAG_EXPIRED
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_EXPIRED
+            end
             attempt.response = r
             attempt.save
             return r
@@ -99,7 +126,11 @@ module Themis
                 team_id: team.id,
                 flag_id: flag.id
               )
-              r = ::Themis::Finals::Attack::Result::SUCCESS_FLAG_ACCEPTED
+              r = if old_code
+                ::Themis::Finals::Attack::Result::SUCCESS_FLAG_ACCEPTED
+              else
+                ::Themis::Finals::Constants::SubmitResult::SUCCESS
+              end
 
               ::Themis::Finals::Utils::EventEmitter.emit_log(
                 4,
@@ -109,7 +140,11 @@ module Themis
               )
             end
           rescue ::Sequel::UniqueConstraintViolation => e
-            r = ::Themis::Finals::Attack::Result::ERR_FLAG_SUBMITTED
+            r = if old_code
+              ::Themis::Finals::Attack::Result::ERR_FLAG_SUBMITTED
+            else
+              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_SUBMITTED
+            end
           end
 
           attempt.response = r
@@ -121,7 +156,7 @@ module Themis
           attempt = ::Themis::Finals::Models::AttackAttempt.create(
             occured_at: ::DateTime.now,
             request: data.to_s,
-            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
+            response: ::Themis::Finals::Constants::SubmitResult::ERROR_UNKNOWN,
             team_id: team.id,
             deprecated_api: false
           )
