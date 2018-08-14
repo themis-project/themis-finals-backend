@@ -49,7 +49,7 @@ module Themis
                 params: {
                   endpoint: endpoint_addr.to_s,
                   capsule: flag_model.capsule,
-                  label: ::Base64.urlsafe_encode64(flag_model.label)
+                  label: flag_model.label
                 },
                 metadata: {
                   timestamp: ::DateTime.now.to_s,
@@ -155,7 +155,7 @@ module Themis
                   request_id: poll.id,
                   endpoint: endpoint_addr.to_s,
                   capsule: flag_model.capsule,
-                  label: ::Base64.urlsafe_encode64(flag_model.label)
+                  label: flag_model.label
                 },
                 metadata: {
                   timestamp: ::DateTime.now.to_s,

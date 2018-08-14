@@ -510,7 +510,7 @@ module Themis
               ::Themis::Finals::Controllers::Contest.handle_push(
                 flag,
                 payload['status'],
-                ::Base64.urlsafe_decode64(payload['label']),
+                payload['label'],
                 payload['message']
               )
             end

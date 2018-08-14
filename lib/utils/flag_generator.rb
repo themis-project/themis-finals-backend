@@ -13,7 +13,7 @@ module Themis
             ENV['THEMIS_FINALS_FLAG_GENERATOR_SECRET']
           )
           flag = "#{source.hexdigest}="
-          label = ::SecureRandom.random_bytes(10)
+          label = ::SecureRandom.uuid
           return flag, label
         end
       end
