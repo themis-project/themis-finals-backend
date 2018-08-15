@@ -5,7 +5,7 @@
       String :name, size: 50, null: false, unique: true
       String :alias, size: 50, null: false, unique: true
       String :hostmask, size: 15, null: false
-      json :metadata
+      String :checker_endpoint, size: 256, null: false
     end
   end
 

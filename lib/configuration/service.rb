@@ -12,13 +12,13 @@ module Themis
       end
 
       class Service
-        attr_accessor :alias, :name, :hostmask, :metadata
+        attr_accessor :alias, :name, :hostmask, :checker_endpoint
 
         def initialize(service_alias)
           @alias = service_alias
           @name = nil
           @hostmask = nil
-          @metadata = {}
+          @checker_endpoint = nil
         end
       end
 
@@ -26,7 +26,7 @@ module Themis
         attr_reader :service
 
         def initialize(service_alias)
-          @service = Service.new service_alias
+          @service = Service.new(service_alias)
         end
 
         def name(name)
@@ -37,8 +37,8 @@ module Themis
           @service.hostmask = hostmask
         end
 
-        def metadata(metadata)
-          @service.metadata = metadata
+        def checker_endpoint(checker_endpoint)
+          @service.checker_endpoint = checker_endpoint
         end
       end
 

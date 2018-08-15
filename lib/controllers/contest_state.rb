@@ -23,7 +23,7 @@ module Themis
                 name: service_opts.name,
                 alias: service_opts.alias,
                 hostmask: service_opts.hostmask,
-                metadata: service_opts.metadata
+                checker_endpoint: service_opts.checker_endpoint
               )
             end
 

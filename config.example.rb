@@ -33,27 +33,21 @@ module Themis
       # and so on for teams
 
       service 'service1' do  # this is an internal alias
-        base_url = 'http://service1.checker.finals.themis-project.com'
-
         name 'Service #1'  # service displayed name
         hostmask '0.0.0.3'
-        metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
+        checker_endpoint 'http://service1.checker.finals.themis-project.com'
       end
 
       service 'service2' do
-        base_url = 'http://service2.checker.finals.themis-project.com'
-
         name 'Service #2'  # service displayed name
         hostmask '0.0.0.3'
-        metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
+        checker_endpoint 'http://service2.checker.finals.themis-project.com'
       end
 
       service 'service3' do
-        base_url = 'http://service3.checker.finals.themis-project.com'
-
         name 'Service #3'  # service displayed name
         hostmask '0.0.0.3'
-        metadata push_url: "#{base_url}/push", pull_url: "#{base_url}/pull"
+        checker_endpoint 'http://service3.checker.finals.themis-project.com'
       end
       # and so on for services
     end

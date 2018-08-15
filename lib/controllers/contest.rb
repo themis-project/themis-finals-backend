@@ -60,7 +60,7 @@ module Themis
                 report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_push"
               }.to_json
 
-              uri = URI(service.metadata['push_url'])
+              uri = URI("#{service.checker_endpoint}/push")
 
               req = ::Net::HTTP::Post.new(uri)
               req.body = job_data
@@ -166,7 +166,7 @@ module Themis
                 report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_pull"
               }.to_json
 
-              uri = URI(service.metadata['pull_url'])
+              uri = URI("#{service.checker_endpoint}/pull")
 
               req = ::Net::HTTP::Post.new(uri)
               req.body = job_data
