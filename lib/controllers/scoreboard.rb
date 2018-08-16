@@ -13,12 +13,9 @@ module Themis
           positions.map { |position|
             {
               team_id: position[:team_id],
-              total_relative: position[:total_relative],
-              attack_relative: position[:attack_relative],
+              total_points: position[:total_points],
               attack_points: position[:attack_points],
-              availability_relative: position[:availability_relative],
               availability_points: position[:availability_points],
-              defence_relative: position[:defence_relative],
               defence_points: position[:defence_points],
               last_attack: \
                 if position[:last_attack].nil?
@@ -33,10 +30,10 @@ module Themis
         def self.sort_rows(a, b, precision)
           zero_edge = (10 ** -(precision + 1)).to_f
 
-          a_total_relative = a[:total_relative]
-          b_total_relative = b[:total_relative]
+          a_total_points = a[:total_points]
+          b_total_points = b[:total_points]
 
-          if (a_total_relative - b_total_relative).abs < zero_edge
+          if (a_total_points - b_total_points).abs < zero_edge
             a_last_attack = a[:last_attack]
             b_last_attack = b[:last_attack]
             if a_last_attack.nil? && b_last_attack.nil?
@@ -56,7 +53,7 @@ module Themis
             end
           end
 
-          if a_total_relative < b_total_relative
+          if a_total_points < b_total_points
             return 1
           else
             return -1
@@ -74,72 +71,22 @@ module Themis
               team_id: team.id
             )
 
+            attack_pts = last_score.nil? ? 0.0 : last_score.attack_points
+            availability_pts = last_score.nil? ? 0.0 : last_score.availability_points
+            defence_pts = last_score.nil? ? 0.0 : last_score.defence_points
+            total_pts = attack_pts + availability_pts + defence_pts
+
             {
               team_id: team.id,
-              attack_points: \
-                if last_score.nil?
-                  0.0
-                else
-                  last_score.attack_points
-                end,
-              availability_points: \
-                if last_score.nil?
-                  0.0
-                else
-                  last_score.availability_points
-                end,
-              defence_points: \
-                if last_score.nil?
-                  0.0
-                else
-                  last_score.defence_points
-                end,
+              attack_points: attack_pts,
+              availability_points: availability_pts,
+              defence_points: defence_pts,
+              total_points: total_pts,
               last_attack: last_attack.nil? ? nil : last_attack.occured_at
             }
           end
 
-          leader_attack = positions.max_by { |x| x[:attack_points] }
-          max_attack = leader_attack[:attack_points]
-
-          leader_availability = positions.max_by { |x| x[:availability_points] }
-          max_availability = leader_availability[:availability_points]
-
-          leader_defence = positions.max_by { |x| x[:defence_points] }
-          max_defence = leader_defence[:defence_points]
-
           precision = ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
-          zero_edge = (10 ** -(precision + 1)).to_f
-
-          positions.map! do |position|
-            position[:attack_relative] = \
-              if max_attack < zero_edge
-                0.0
-              else
-                position[:attack_points] / max_attack
-              end
-            position[:availability_relative] = \
-              if max_availability < zero_edge
-                0.0
-              else
-                position[:availability_points] / max_availability
-              end
-            position[:defence_relative] = \
-              if max_defence < zero_edge
-                0.0
-              else
-                position[:defence_points] / max_defence
-              end
-
-            position[:total_relative] = \
-              (
-                position[:attack_relative] +
-                position[:availability_relative] +
-                position[:defence_relative]
-              ) / 3
-
-            position
-          end
-
           positions.sort! { |a, b| sort_rows(a, b, precision) }
         end
       end

@@ -14,7 +14,7 @@ module Themis
             {
               pos: ndx + 1,
               team: teams[position['team_id']],
-              score: position['total_relative']
+              score: position['total_points']
             }
           end
         end
