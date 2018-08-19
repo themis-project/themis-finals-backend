@@ -342,10 +342,9 @@ module Themis
               flag_id: flag.id
             ).all
 
-            ::Themis::Finals::Controllers::Score.charge_availability(
-              flag,
-              polls
-            )
+            score_controller = ::Themis::Finals::Controllers::Score.new
+
+            score_controller.charge_availability(flag, polls)
 
             attacks = flag.attacks
             if attacks.count == 0
@@ -356,15 +355,12 @@ module Themis
                 poll.state == ::Themis::Finals::Constants::FlagPollState::SUCCESS
               end
               if error_count == 0 && success_count > 0
-                ::Themis::Finals::Controllers::Score.charge_defence(flag)
+                score_controller.charge_defence(flag)
               end
             else
               attacks.each do |attack|
                 begin
-                  ::Themis::Finals::Controllers::Score.charge_attack(
-                    flag,
-                    attack
-                  )
+                  score_controller.charge_attack(flag, attack)
                   ::Themis::Finals::Controllers::Attack.consider_attack(
                     attack
                   )
@@ -382,7 +378,7 @@ module Themis
         def self.update_scores
           ::Themis::Finals::Models::Flag.all_expired.each do |flag|
             begin
-              update_score flag
+              update_score(flag)
             rescue => e
               @logger.error e.to_s
             end

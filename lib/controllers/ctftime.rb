@@ -1,10 +1,8 @@
 module Themis
   module Finals
     module Controllers
-      module CTFTime
-        @logger = ::Themis::Finals::Utils::Logger.get
-
-        def self.format_positions(positions)
+      class CTFTime
+        def format_positions(positions)
           teams = {}
           ::Themis::Finals::Models::Team.all.each do |team|
             teams[team.id] = team.name

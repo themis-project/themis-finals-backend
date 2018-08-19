@@ -3,7 +3,6 @@ require 'sinatra/json'
 require 'json'
 require 'ip'
 require 'date'
-require './lib/controllers/identity'
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
 require './lib/controllers/contest'
@@ -15,10 +14,19 @@ require './lib/controllers/scoreboard'
 require './lib/controllers/ctftime'
 require './lib/constants/submit_result'
 
+require './lib/controllers/identity'
+
 module Themis
   module Finals
     module Server
       class Application < ::Sinatra::Base
+        def initialize(app = nil)
+          super(app)
+
+          @identity_controller = ::Themis::Finals::Controllers::Identity.new
+          @ctftime_controller = ::Themis::Finals::Controllers::CTFTime.new
+        end
+
         configure do
           ::Themis::Finals::Models.init
         end
@@ -29,20 +37,19 @@ module Themis
 
         disable :run
 
+        before do
+          @remote_ip = ::IP.new(request.ip)
+        end
+
         get '/api/identity' do
-          remote_ip = ::IP.new request.ip
           identity = nil
 
-          identity_team = \
-            ::Themis::Finals::Controllers::IdentityController.is_team remote_ip
+          identity_team = @identity_controller.get_team(@remote_ip)
           unless identity_team.nil?
             identity = { name: 'team', id: identity_team.id }
           end
 
-          if identity.nil? &&
-             ::Themis::Finals::Controllers::IdentityController.is_internal(
-               remote_ip
-             )
+          if identity.nil? && @identity_controller.is_internal?(@remote_ip)
             identity = { name: 'internal' }
           end
 
@@ -64,14 +71,8 @@ module Themis
         end
 
         get '/api/scoreboard' do
-          remote_ip = ::IP.new request.ip
-          is_internal = \
-            ::Themis::Finals::Controllers::IdentityController.is_internal(
-              remote_ip
-            )
-
           muted = \
-            if is_internal
+            if @identity_controller.is_internal?(@remote_ip)
               false
             else
               !::Themis::Finals::Controllers::ScoreboardState.is_enabled
@@ -90,14 +91,8 @@ module Themis
         end
 
         get '/api/third-party/ctftime' do
-          remote_ip = ::IP.new request.ip
-          is_internal = \
-            ::Themis::Finals::Controllers::IdentityController.is_internal(
-              remote_ip
-            )
-
           muted = \
-            if is_internal
+            if @identity_controller.is_internal?(@remote_ip)
               false
             else
               !::Themis::Finals::Controllers::ScoreboardState.is_enabled
@@ -110,7 +105,7 @@ module Themis
           end
 
           json(
-            standings: obj.nil? ? [] : ::Themis::Finals::Controllers::CTFTime.format_positions(obj.data)
+            standings: obj.nil? ? [] : @ctftime_controller.format_positions(obj.data)
           )
         end
 
@@ -150,11 +145,7 @@ module Themis
             halt 400
           end
 
-          remote_ip = ::IP.new request.ip
-
-          unless ::Themis::Finals::Controllers::IdentityController.is_internal(
-            remote_ip
-          )
+          unless @identity_controller.is_internal?(@remote_ip)
             halt 400
           end
 
@@ -162,7 +153,7 @@ module Themis
 
           begin
             request.body.rewind
-            payload = ::JSON.parse request.body.read
+            payload = ::JSON.parse(request.body.read)
           rescue => e
             halt 400
           end
@@ -198,11 +189,7 @@ module Themis
         end
 
         delete %r{^/api/post/(\d+)$} do |post_id_str|
-          remote_ip = ::IP.new request.ip
-
-          unless ::Themis::Finals::Controllers::IdentityController.is_internal(
-            remote_ip
-          )
+          unless @identity_controller.is_internal?(@remote_ip)
             halt 400
           end
 
@@ -228,11 +215,7 @@ module Themis
             halt 400
           end
 
-          remote_ip = ::IP.new request.ip
-
-          unless ::Themis::Finals::Controllers::IdentityController.is_internal(
-            remote_ip
-          )
+          unless @identity_controller.is_internal?(@remote_ip)
             halt 400
           end
 
@@ -240,7 +223,7 @@ module Themis
 
           begin
             request.body.rewind
-            payload = ::JSON.parse request.body.read
+            payload = ::JSON.parse(request.body.read)
           rescue => e
             halt 400
           end
@@ -278,19 +261,14 @@ module Themis
         end
 
         get '/api/team/service/push-states' do
-          remote_ip = ::IP.new(request.ip)
           identity = nil
 
-          identity_team = \
-            ::Themis::Finals::Controllers::IdentityController.is_team(remote_ip)
+          identity_team = @identity_controller.get_team(@remote_ip)
           unless identity_team.nil?
             identity = { name: 'team', id: identity_team.id }
           end
 
-          if identity.nil? &&
-             ::Themis::Finals::Controllers::IdentityController.is_internal(
-               remote_ip
-             )
+          if identity.nil? && @identity_controller.is_internal?(@remote_ip)
             identity = { name: 'internal' }
           end
 
@@ -311,19 +289,14 @@ module Themis
         end
 
         get '/api/team/service/pull-states' do
-          remote_ip = ::IP.new(request.ip)
           identity = nil
 
-          identity_team = \
-            ::Themis::Finals::Controllers::IdentityController.is_team(remote_ip)
+          identity_team = @identity_controller.get_team(@remote_ip)
           unless identity_team.nil?
             identity = { name: 'team', id: identity_team.id }
           end
 
-          if identity.nil? &&
-             ::Themis::Finals::Controllers::IdentityController.is_internal(
-               remote_ip
-             )
+          if identity.nil? && @identity_controller.is_internal?(@remote_ip)
             identity = { name: 'internal' }
           end
 
@@ -368,11 +341,8 @@ module Themis
               ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
-          remote_ip = ::IP.new(request.ip)
+          team = @identity_controller.get_team(@remote_ip)
 
-          team = ::Themis::Finals::Controllers::IdentityController.is_team(
-            remote_ip
-          )
           if team.nil?
             halt 400, ::Themis::Finals::Constants::SubmitResult.key(
               ::Themis::Finals::Constants::SubmitResult::ERROR_ACCESS_DENIED).to_s
@@ -434,11 +404,8 @@ module Themis
             halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
           end
 
-          remote_ip = ::IP.new request.ip
+          team = @identity_controller.get_team(@remote_ip)
 
-          team = ::Themis::Finals::Controllers::IdentityController.is_team(
-            remote_ip
-          )
           if team.nil?
             halt 400, json(
               ::Themis::Finals::Attack::Result::ERR_INVALID_IDENTITY
