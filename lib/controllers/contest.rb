@@ -3,13 +3,14 @@ require './lib/controllers/round'
 require './lib/controllers/flag'
 require './lib/controllers/score'
 require 'themis/finals/checker/result'
-require './lib/controllers/contest_state'
+require './lib/controllers/competition_stage'
 require './lib/utils/event_emitter'
 require './lib/controllers/attack'
 require './lib/controllers/scoreboard_state'
 require './lib/constants/flag_poll_state'
 require './lib/constants/team_service_state'
 require './lib/controllers/scoreboard'
+require './lib/controllers/scoreboard_state'
 require 'base64'
 require 'net/http'
 require './lib/queue/tasks'
@@ -20,9 +21,51 @@ module Themis
     module Controllers
       module Contest
         @logger = ::Themis::Finals::Utils::Logger.get
+        @stage_ctrl = ::Themis::Finals::Controllers::CompetitionStage.new
+
+        def self.init
+          ::Themis::Finals::Models::DB.transaction do
+            ::Themis::Finals::Configuration.get_teams.each do |team_opts|
+              ::Themis::Finals::Models::Team.create(
+                name: team_opts.name,
+                alias: team_opts.alias,
+                network: team_opts.network,
+                guest: team_opts.guest
+              )
+            end
+
+            ::Themis::Finals::Configuration.get_services.each do |service_opts|
+              ::Themis::Finals::Models::Service.create(
+                name: service_opts.name,
+                alias: service_opts.alias,
+                hostmask: service_opts.hostmask,
+                checker_endpoint: service_opts.checker_endpoint
+              )
+            end
+
+            @stage_ctrl.init
+            ::Themis::Finals::Controllers::ScoreboardState.enable
+          end
+        end
+
+        def self.enqueue_start
+          @stage_ctrl.enqueue_start
+        end
+
+        def self.resume
+          @stage_ctrl.resume
+        end
+
+        def self.pause
+          @stage_ctrl.pause
+        end
+
+        def self.enqueue_finish
+          @stage_ctrl.enqueue_finish
+        end
 
         def self.start
-          ::Themis::Finals::Controllers::ContestState.start
+          @stage_ctrl.start
         end
 
         def self.push_flag(team, service, round)
@@ -267,15 +310,14 @@ module Themis
         end
 
         def self.control_complete
-          contest_state = ::Themis::Finals::Models::ContestState.last
-          return unless contest_state.is_await_complete
+          return unless @stage_ctrl.current.finishing?
 
           living_flags_count = ::Themis::Finals::Models::Flag.count_living
           expired_flags_count = ::Themis::Finals::Models::Flag.count_expired
 
           if living_flags_count == 0 && expired_flags_count == 0
             ::Themis::Finals::Models::DB.transaction do
-              ::Themis::Finals::Controllers::ContestState.complete
+              @stage_ctrl.finish
               ::Themis::Finals::Controllers::Round.end_last
             end
           end

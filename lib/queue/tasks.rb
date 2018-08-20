@@ -1,7 +1,8 @@
 require 'sidekiq'
-require './lib/models/init'
+require './lib/models/bootstrap'
 require './lib/utils/logger'
 require './lib/controllers/contest'
+require './lib/controllers/competition_stage'
 require './lib/utils/logger'
 
 logger = ::Themis::Finals::Utils::Logger.get
@@ -45,13 +46,12 @@ module Themis
 
           def perform
             logger = ::Themis::Finals::Utils::Logger.get
-            contest_state = ::Themis::Finals::Models::ContestState.last
-            if !contest_state.nil? && (contest_state.is_running ||
-                                       contest_state.is_await_complete)
+            stage = ::Themis::Finals::Controllers::CompetitionStage.new.current
+            if stage.started? || stage.finishing?
               begin
                 ::Themis::Finals::Controllers::Contest.update_all_scores
               rescue => e
-                logger.error e.to_s
+                logger.error(e.to_s)
               end
             end
           end
@@ -61,10 +61,9 @@ module Themis
           include ::Sidekiq::Worker
 
           def perform
-            contest_state = ::Themis::Finals::Models::ContestState.last
-            if !contest_state.nil? && (contest_state.is_await_start ||
-                                       contest_state.is_running)
-              if contest_state.is_await_start
+            stage = ::Themis::Finals::Controllers::CompetitionStage.new.current
+            if stage.starting? || stage.started?
+              if stage.starting?
                 ::Themis::Finals::Controllers::Contest.start
               end
               ::Themis::Finals::Controllers::Contest.push_flags
@@ -87,13 +86,11 @@ module Themis
           include ::Sidekiq::Worker
 
           def perform
-            contest_state = ::Themis::Finals::Models::ContestState.last
-            unless contest_state.nil?
-              if contest_state.is_running || contest_state.is_await_complete
-                ::Themis::Finals::Controllers::Contest.poll_flags
-              elsif contest_state.is_paused
-                ::Themis::Finals::Controllers::Contest.prolong_flag_lifetimes
-              end
+            stage = ::Themis::Finals::Controllers::CompetitionStage.new.current
+            if stage.started? || stage.finishing?
+              ::Themis::Finals::Controllers::Contest.poll_flags
+            elsif stage.paused?
+              ::Themis::Finals::Controllers::Contest.prolong_flag_lifetimes
             end
           end
         end

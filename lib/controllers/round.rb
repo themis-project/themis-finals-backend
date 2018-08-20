@@ -16,7 +16,7 @@ module Themis
             )
             round_number = ::Themis::Finals::Models::Round.count
             ::Themis::Finals::Utils::EventEmitter.broadcast(
-              'contest/round',
+              'competition/round',
               value: round_number
             )
             ::Themis::Finals::Utils::EventEmitter.emit_log(

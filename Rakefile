@@ -22,7 +22,7 @@ namespace :db do
         scoreboard_positions
         scoreboard_history_positions
         server_sent_events
-        contest_states
+        competition_stages
         posts
         scoreboard_states
         attack_attempts
@@ -53,30 +53,30 @@ namespace :db do
   end
 end
 
-def change_contest_state(command)
+def change_competition_stage(command)
   require './config'
-  require './lib/models/init'
-  require './lib/controllers/contest_state'
+  require './lib/models/bootstrap'
+  require './lib/controllers/contest'
 
   ::Themis::Finals::Models.init
 
   case command
   when :init
-    ::Themis::Finals::Controllers::ContestState.init
-  when :start_async
-    ::Themis::Finals::Controllers::ContestState.start_async
+    ::Themis::Finals::Controllers::Contest.init
+  when :start
+    ::Themis::Finals::Controllers::Contest.enqueue_start
   when :resume
-    ::Themis::Finals::Controllers::ContestState.resume
+    ::Themis::Finals::Controllers::Contest.resume
   when :pause
-    ::Themis::Finals::Controllers::ContestState.pause
-  when :complete_async
-    ::Themis::Finals::Controllers::ContestState.complete_async
+    ::Themis::Finals::Controllers::Contest.pause
+  when :finish
+    ::Themis::Finals::Controllers::Contest.enqueue_finish
   end
 end
 
 def estimate_completion
   require './config'
-  require './lib/models/init'
+  require './lib/models/bootstrap'
 
   ::Themis::Finals::Models.init
   max_expired_at = ::Themis::Finals::Models::Flag.all_living.max :expired_at
@@ -90,33 +90,33 @@ def estimate_completion
   puts "Approximately at #{approx_end} + ~#{approx_delay}s"
 end
 
-namespace :contest do
-  desc 'Init contest'
+namespace :competition do
+  desc 'Init competition'
   task :init do
-    change_contest_state :init
+    change_competition_stage(:init)
   end
 
-  desc 'Enqueue start contest'
-  task :start_async do
-    change_contest_state :start_async
+  desc 'Enqueue start competition'
+  task :start do
+    change_competition_stage(:start)
   end
 
-  desc 'Resume contest'
+  desc 'Resume competition'
   task :resume do
-    change_contest_state :resume
+    change_competition_stage :resume
   end
 
-  desc 'Pause contest'
+  desc 'Pause competition'
   task :pause do
-    change_contest_state :pause
+    change_competition_stage :pause
   end
 
-  desc 'Enqueue complete contest'
-  task :complete_async do
-    change_contest_state :complete_async
+  desc 'Enqueue finish competition'
+  task :finish do
+    change_competition_stage(:finish)
   end
 
-  desc 'Estimate contest completion time'
+  desc 'Estimate competition completion time'
   task :estimate_completion do
     estimate_completion
   end
@@ -124,7 +124,7 @@ end
 
 def change_scoreboard_state(state)
   require './config'
-  require './lib/models/init'
+  require './lib/models/bootstrap'
   require './lib/controllers/scoreboard_state'
 
   ::Themis::Finals::Models.init
@@ -153,7 +153,7 @@ namespace :report do
   desc 'Show global stats'
   task :global_stats do
     require './config'
-    require './lib/models/init'
+    require './lib/models/bootstrap'
     require 'terminal-table'
     require 'time_difference'
     require 'active_support/time'
@@ -175,12 +175,12 @@ namespace :report do
     contest_started = nil
     contest_ended = nil
 
-    ::Themis::Finals::Models::ContestState.all.each do |entry|
-      if contest_started.nil? && entry.state == ::Themis::Finals::Constants::ContestState::RUNNING
+    ::Themis::Finals::Models::CompetitionStage.all.each do |entry|
+      if contest_started.nil? && entry.started?
         contest_started = entry.created_at
       end
 
-      if contest_ended.nil? && entry.state == ::Themis::Finals::Constants::ContestState::COMPLETED
+      if contest_ended.nil? && entry.finished?
         contest_ended = entry.created_at
       end
     end
@@ -207,7 +207,7 @@ namespace :report do
   desc 'Show flag stats'
   task :flag_stats do
     require './config'
-    require './lib/models/init'
+    require './lib/models/bootstrap'
     require './lib/constants/team_service_state'
     require 'terminal-table'
     require 'time_difference'
@@ -284,7 +284,7 @@ namespace :report do
   desc 'Show attack stats'
   task :attack_stats do
     require './config'
-    require './lib/models/init'
+    require './lib/models/bootstrap'
     # require './lib/constants/team_service_state'
     require 'terminal-table'
     require 'active_support/time'
@@ -335,7 +335,7 @@ namespace :report do
   desc 'Show services which have been attacked by teams'
   task :team_services do
     require './config'
-    require './lib/models/init'
+    require './lib/models/bootstrap'
     ::Themis::Finals::Models.init
 
     report = {}

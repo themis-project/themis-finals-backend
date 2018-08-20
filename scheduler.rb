@@ -1,5 +1,5 @@
 require './config'
-require './lib/models/init'
+require './lib/models/bootstrap'
 require './lib/scheduler/init'
 
 ::Themis::Finals::Models.init

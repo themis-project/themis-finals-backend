@@ -9,12 +9,13 @@ require './lib/controllers/contest'
 require './lib/utils/event_emitter'
 require './lib/controllers/scoreboard_state'
 require './lib/server/rack_monkey_patch'
-require './lib/models/init'
+require './lib/models/bootstrap'
 require './lib/controllers/scoreboard'
 require './lib/controllers/ctftime'
 require './lib/constants/submit_result'
 
 require './lib/controllers/identity'
+require './lib/controllers/competition_stage'
 
 module Themis
   module Finals
@@ -23,8 +24,9 @@ module Themis
         def initialize(app = nil)
           super(app)
 
-          @identity_controller = ::Themis::Finals::Controllers::Identity.new
-          @ctftime_controller = ::Themis::Finals::Controllers::CTFTime.new
+          @identity_ctrl = ::Themis::Finals::Controllers::Identity.new
+          @ctftime_ctrl = ::Themis::Finals::Controllers::CTFTime.new
+          @competition_stage_ctrl = ::Themis::Finals::Controllers::CompetitionStage.new
         end
 
         configure do
@@ -44,12 +46,12 @@ module Themis
         get '/api/identity' do
           identity = nil
 
-          identity_team = @identity_controller.get_team(@remote_ip)
+          identity_team = @identity_ctrl.get_team(@remote_ip)
           unless identity_team.nil?
             identity = { name: 'team', id: identity_team.id }
           end
 
-          if identity.nil? && @identity_controller.is_internal?(@remote_ip)
+          if identity.nil? && @identity_ctrl.is_internal?(@remote_ip)
             identity = { name: 'internal' }
           end
 
@@ -60,19 +62,18 @@ module Themis
           json identity
         end
 
-        get '/api/contest/round' do
+        get '/api/competition/round' do
           round = ::Themis::Finals::Models::Round.count
           json(value: (round == 0) ? nil : round)
         end
 
-        get '/api/contest/state' do
-          state = ::Themis::Finals::Models::ContestState.last
-          json(value: state.nil? ? nil : state.state)
+        get '/api/competition/stage' do
+          json(value: @competition_stage_ctrl.current.stage)
         end
 
         get '/api/scoreboard' do
           muted = \
-            if @identity_controller.is_internal?(@remote_ip)
+            if @identity_ctrl.is_internal?(@remote_ip)
               false
             else
               !::Themis::Finals::Controllers::ScoreboardState.is_enabled
@@ -92,7 +93,7 @@ module Themis
 
         get '/api/third-party/ctftime' do
           muted = \
-            if @identity_controller.is_internal?(@remote_ip)
+            if @identity_ctrl.is_internal?(@remote_ip)
               false
             else
               !::Themis::Finals::Controllers::ScoreboardState.is_enabled
@@ -105,7 +106,7 @@ module Themis
           end
 
           json(
-            standings: obj.nil? ? [] : @ctftime_controller.format_positions(obj.data)
+            standings: obj.nil? ? [] : @ctftime_ctrl.format_positions(obj.data)
           )
         end
 
@@ -145,7 +146,7 @@ module Themis
             halt 400
           end
 
-          unless @identity_controller.is_internal?(@remote_ip)
+          unless @identity_ctrl.is_internal?(@remote_ip)
             halt 400
           end
 
@@ -189,7 +190,7 @@ module Themis
         end
 
         delete %r{^/api/post/(\d+)$} do |post_id_str|
-          unless @identity_controller.is_internal?(@remote_ip)
+          unless @identity_ctrl.is_internal?(@remote_ip)
             halt 400
           end
 
@@ -215,7 +216,7 @@ module Themis
             halt 400
           end
 
-          unless @identity_controller.is_internal?(@remote_ip)
+          unless @identity_ctrl.is_internal?(@remote_ip)
             halt 400
           end
 
@@ -263,12 +264,12 @@ module Themis
         get '/api/team/service/push-states' do
           identity = nil
 
-          identity_team = @identity_controller.get_team(@remote_ip)
+          identity_team = @identity_ctrl.get_team(@remote_ip)
           unless identity_team.nil?
             identity = { name: 'team', id: identity_team.id }
           end
 
-          if identity.nil? && @identity_controller.is_internal?(@remote_ip)
+          if identity.nil? && @identity_ctrl.is_internal?(@remote_ip)
             identity = { name: 'internal' }
           end
 
@@ -291,12 +292,12 @@ module Themis
         get '/api/team/service/pull-states' do
           identity = nil
 
-          identity_team = @identity_controller.get_team(@remote_ip)
+          identity_team = @identity_ctrl.get_team(@remote_ip)
           unless identity_team.nil?
             identity = { name: 'team', id: identity_team.id }
           end
 
-          if identity.nil? && @identity_controller.is_internal?(@remote_ip)
+          if identity.nil? && @identity_ctrl.is_internal?(@remote_ip)
             identity = { name: 'internal' }
           end
 
@@ -341,7 +342,7 @@ module Themis
               ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
-          team = @identity_controller.get_team(@remote_ip)
+          team = @identity_ctrl.get_team(@remote_ip)
 
           if team.nil?
             halt 400, ::Themis::Finals::Constants::SubmitResult.key(
@@ -358,18 +359,18 @@ module Themis
               ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
-          state = ::Themis::Finals::Models::ContestState.last
-          if state.nil? || state.is_initial || state.is_await_start
+          stage = @competition_stage_ctrl.current
+          if stage.not_started? || stage.starting?
             halt 400, ::Themis::Finals::Constants::SubmitResult.key(
               ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_NOT_STARTED).to_s
           end
 
-          if state.is_paused
+          if stage.paused?
             halt 400, ::Themis::Finals::Constants::SubmitResult.key(
               ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_PAUSED).to_s
           end
 
-          if state.is_completed
+          if stage.finished?
             halt 400, ::Themis::Finals::Constants::SubmitResult.key(
               ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
           end
@@ -404,7 +405,7 @@ module Themis
             halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
           end
 
-          team = @identity_controller.get_team(@remote_ip)
+          team = @identity_ctrl.get_team(@remote_ip)
 
           if team.nil?
             halt 400, json(
@@ -425,18 +426,18 @@ module Themis
             halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
           end
 
-          state = ::Themis::Finals::Models::ContestState.last
-          if state.nil? || state.is_initial || state.is_await_start
+          stage = @competition_stage_ctrl.current
+          if stage.not_started? || stage.starting?
             halt 400, json(
               ::Themis::Finals::Attack::Result::ERR_CONTEST_NOT_STARTED
             )
           end
 
-          if state.is_paused
+          if stage.paused?
             halt 400, json(::Themis::Finals::Attack::Result::ERR_CONTEST_PAUSED)
           end
 
-          if state.is_completed
+          if stage.finished?
             halt 400, json(
               ::Themis::Finals::Attack::Result::ERR_CONTEST_COMPLETED
             )

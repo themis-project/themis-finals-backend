@@ -18,7 +18,7 @@ module Themis
       require './lib/models/team'
       require './lib/models/service'
       require './lib/models/scoreboard_state'
-      require './lib/models/contest_state'
+      require './lib/models/competition_stage'
       require './lib/models/server_sent_event'
       require './lib/models/post'
       require './lib/models/round'
