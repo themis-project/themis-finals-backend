@@ -30,6 +30,21 @@ module Themis
           def count_expired
             all_expired.count
           end
+
+          def failed(round)
+            where(round_id: round.id).where(expired_at: nil)
+          end
+
+          def relevant(round)
+            where(round_id: round.id).exclude(expired_at: nil)
+          end
+
+          def relevant_expired(round, cutoff)
+            where(round_id: round.id).exclude(expired_at: nil).where(
+              'expired_at < ?',
+              cutoff
+            )
+          end
         end
       end
     end

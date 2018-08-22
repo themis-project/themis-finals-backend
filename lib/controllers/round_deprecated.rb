@@ -3,14 +3,14 @@ require './lib/utils/event_emitter'
 module Themis
   module Finals
     module Controllers
-      module Round
+      module RoundDeprecated
         @logger = ::Themis::Finals::Utils::Logger.get
 
         def self.start_new
           round = nil
           round_number = nil
           ::Themis::Finals::Models::DB.transaction do
-            end_last
+            # end_last
             round = ::Themis::Finals::Models::Round.create(
               started_at: ::DateTime.now
             )

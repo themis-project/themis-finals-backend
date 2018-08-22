@@ -1,5 +1,5 @@
 require 'json'
-require './lib/controllers/round'
+require './lib/controllers/round_deprecated'
 require './lib/controllers/flag'
 require './lib/controllers/score'
 require 'themis/finals/checker/result'
@@ -15,6 +15,7 @@ require 'base64'
 require 'net/http'
 require './lib/queue/tasks'
 require 'ip'
+require 'time_difference'
 
 module Themis
   module Finals
@@ -123,7 +124,7 @@ module Themis
         end
 
         def self.push_flags
-          round = ::Themis::Finals::Controllers::Round.start_new
+          round = ::Themis::Finals::Controllers::RoundDeprecated.start_new
 
           all_services = ::Themis::Finals::Models::Service.all
 
@@ -368,17 +369,17 @@ module Themis
         def self.update_total_scores
           ::Themis::Finals::Models::Team.all.each do |team|
             begin
-              update_total_score team
+              update_total_score(team)
             rescue => e
-              @logger.error e.to_s
+              @logger.error(e.to_s)
             end
           end
         end
 
         def self.update_score(flag)
           ::Themis::Finals::Models::DB.transaction(
-            retry_on: [::Sequel::UniqueConstraintViolation],
-            num_retries: nil
+            # retry_on: [::Sequel::UniqueConstraintViolation],
+            # num_retries: nil
           ) do
             polls = ::Themis::Finals::Models::FlagPoll.where(
               flag_id: flag.id
@@ -407,7 +408,7 @@ module Themis
                     attack
                   )
                 rescue => e
-                  @logger.error e.to_s
+                  @logger.error(e.to_s)
                 end
               end
             end
@@ -427,7 +428,118 @@ module Themis
           end
         end
 
+        def self.init_round_scores(round)
+          ::Themis::Finals::Models::Team.all.each do |team|
+            ::Themis::Finals::Models::Score.create(
+              attack_points: 0.0,
+              availability_points: 0.0,
+              defence_points: 0.0,
+              team_id: team.id,
+              round_id: round.id
+            )
+          end
+        end
+
+        def self.calculate_round_scores(round, cutoff)
+          rel_flags = ::Themis::Finals::Models::Flag.relevant(round)
+          rel_expired_flags = ::Themis::Finals::Models::Flag.relevant_expired(round, cutoff)
+
+          if rel_flags.count > rel_expired_flags.count
+            @logger.warn("Round #{round.id}: not all flags have expired")
+            return false
+          end
+
+          failed_flag_count = ::Themis::Finals::Models::Flag.failed(round).count
+
+          @logger.info("Round #{round.id}")
+          @logger.info("Relevant flags: #{rel_flags.count}")
+          @logger.info("Relevant expired flags: #{rel_expired_flags.count}")
+          @logger.info("Failed flags: #{failed_flag_count}")
+
+          ::Themis::Finals::Models::DB.transaction do
+            init_round_scores(round)
+
+            err_update = false
+            rel_flags.each do |flag|
+              begin
+                update_score(flag)
+              rescue => e
+                @logger.error(e.to_s)
+                err_update = true
+              end
+
+              break if err_update
+            end
+
+            return false if err_update
+
+            round.finished_at = ::DateTime.now
+            round.save
+            round_num = round.id
+
+            ::Themis::Finals::Models::DB.after_commit do
+              @logger.info("Round #{round_num} finished!")
+            end
+          end
+
+          true
+        end
+
         def self.update_all_scores
+          positions_updated = false
+
+          ::Themis::Finals::Models::Round.current.each do |round|
+            cutoff = ::DateTime.now
+            diff = ::TimeDifference.between(round.started_at, cutoff).in_seconds
+            if diff < ::Themis::Finals::Configuration.get_contest_flow.push_period
+              @logger.warn("Round #{round.id}: in progress")
+              break
+            end
+
+            updated = calculate_round_scores(round, cutoff)
+            break unless updated
+            positions_updated = updated
+          end
+
+          if positions_updated
+            update_total_scores
+            control_complete
+
+            latest_positions = \
+              ::Themis::Finals::Controllers::Scoreboard.format_team_positions(
+                ::Themis::Finals::Controllers::Scoreboard.get_team_positions
+              )
+
+            ::Themis::Finals::Models::DB.transaction do
+              ::Themis::Finals::Models::ScoreboardPosition.create(
+                created_at: ::DateTime.now,
+                data: latest_positions
+              )
+
+              event_data = {
+                muted: false,
+                positions: latest_positions
+              }
+
+              if ::Themis::Finals::Controllers::ScoreboardState.is_enabled
+                ::Themis::Finals::Utils::EventEmitter.broadcast(
+                  'scoreboard',
+                  event_data
+                )
+              else
+                ::Themis::Finals::Utils::EventEmitter.emit(
+                  'scoreboard',
+                  event_data,
+                  true,
+                  false,
+                  false
+                )
+              end
+            end
+          end
+        end
+
+        def self.update_all_scores_old
           update_scores
           update_total_scores
           control_complete
