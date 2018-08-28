@@ -17,6 +17,10 @@ module Themis
           stage == ::Themis::Finals::Const::CompetitionStage::STARTED
         end
 
+        def pausing?
+          stage == ::Themis::Finals::Const::CompetitionStage::PAUSING
+        end
+
         def paused?
           stage == ::Themis::Finals::Const::CompetitionStage::PAUSED
         end

@@ -1,8 +1,9 @@
 require 'sidekiq'
+
 require './lib/models/bootstrap'
 require './lib/utils/logger'
-require './lib/controllers/contest'
 require './lib/controllers/competition_stage'
+require './lib/controllers/competition'
 require './lib/utils/logger'
 
 logger = ::Themis::Finals::Utils::Logger.get
@@ -41,33 +42,75 @@ module Themis
   module Finals
     module Queue
       module Tasks
-        class UpdateScores
+        class Planner
           include ::Sidekiq::Worker
 
           def perform
-            logger = ::Themis::Finals::Utils::Logger.get
-            stage = ::Themis::Finals::Controllers::CompetitionStage.new.current
-            if stage.started? || stage.finishing?
-              begin
-                ::Themis::Finals::Controllers::Contest.update_all_scores
-              rescue => e
-                logger.error(e.to_s)
-              end
+            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            if competition_ctrl.can_trigger_round?
+              ::Themis::Finals::Queue::Tasks::TriggerRound.perform_async
+            end
+
+            if competition_ctrl.can_poll?
+              ::Themis::Finals::Queue::Tasks::TriggerPoll.perform_async
+            end
+
+            if competition_ctrl.can_recalculate?
+              ::Themis::Finals::Queue::Tasks::TriggerRecalculate.perform_async
+            end
+
+            if competition_ctrl.can_pause?
+              ::Themis::Finals::Queue::Tasks::TriggerPause.perform_async
+            end
+
+            if competition_ctrl.can_finish?
+              ::Themis::Finals::Queue::Tasks::TriggerFinish.perform_async
             end
           end
         end
 
-        class PushFlags
+        class TriggerRound
           include ::Sidekiq::Worker
 
           def perform
-            stage = ::Themis::Finals::Controllers::CompetitionStage.new.current
-            if stage.starting? || stage.started?
-              if stage.starting?
-                ::Themis::Finals::Controllers::Contest.start
-              end
-              ::Themis::Finals::Controllers::Contest.push_flags
-            end
+            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl.trigger_round
+          end
+        end
+
+        class TriggerPoll
+          include ::Sidekiq::Worker
+
+          def perform
+            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl.trigger_poll
+          end
+        end
+
+        class TriggerRecalculate
+          include ::Sidekiq::Worker
+
+          def perform
+            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl.trigger_recalculate
+          end
+        end
+
+        class TriggerPause
+          include ::Sidekiq::Worker
+
+          def perform
+            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl.pause
+          end
+        end
+
+        class TriggerFinish
+          include ::Sidekiq::Worker
+
+          def perform
+            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl.finish
           end
         end
 
@@ -77,20 +120,8 @@ module Themis
           def perform(flag_str)
             flag = ::Themis::Finals::Models::Flag.first(flag: flag_str)
             unless flag.nil?
-              ::Themis::Finals::Controllers::Contest.poll_flag flag
-            end
-          end
-        end
-
-        class PollFlags
-          include ::Sidekiq::Worker
-
-          def perform
-            stage = ::Themis::Finals::Controllers::CompetitionStage.new.current
-            if stage.started? || stage.finishing?
-              ::Themis::Finals::Controllers::Contest.poll_flags
-            elsif stage.paused?
-              ::Themis::Finals::Controllers::Contest.prolong_flag_lifetimes
+              competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+              competition_ctrl.pull_flag(flag)
             end
           end
         end

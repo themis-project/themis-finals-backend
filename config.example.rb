@@ -7,12 +7,14 @@ module Themis
         internal '172.20.0.0/24'  # internal network (for contest organizers)
       end
 
-      contest_flow do
-        flag_lifetime 300  # flag lives for 300 seconds
-        push_period 120  # push new flags every 120 seconds
-        poll_period 60  # poll submitted flags every 60 seconds
-        poll_count 2  # poll 2 flags at once
-        update_period 60  # update scores every 60 seconds
+      settings do
+        flag_lifetime 360  # flag lives for 300 seconds
+        round_timespan 120  # push new flags every 120 seconds
+        poll_timespan 35
+        poll_delay 40
+      end
+
+      deprecated_settings do
         attack_limits 200, 60  # max 200 attack attempts for the last 60 seconds
       end
 

@@ -9,9 +9,10 @@ module Themis
         define :NOT_STARTED, 0
         define :STARTING, 1
         define :STARTED, 2
-        define :PAUSED, 3
-        define :FINISHING, 4
-        define :FINISHED, 5
+        define :PAUSING, 3
+        define :PAUSED, 4
+        define :FINISHING, 5
+        define :FINISHED, 6
       end
     end
   end

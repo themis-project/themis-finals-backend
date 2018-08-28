@@ -35,6 +35,7 @@ namespace :db do
         team_service_pull_states
         flag_polls
         flags
+        polls
         rounds
         services
         teams
@@ -56,38 +57,23 @@ end
 def change_competition_stage(command)
   require './config'
   require './lib/models/bootstrap'
-  require './lib/controllers/contest'
+  require './lib/controllers/competition'
 
   ::Themis::Finals::Models.init
+  competition_ctrl = ::Themis::Finals::Controllers::Competition.new
 
   case command
   when :init
-    ::Themis::Finals::Controllers::Contest.init
+    competition_ctrl.init
   when :start
-    ::Themis::Finals::Controllers::Contest.enqueue_start
+    competition_ctrl.enqueue_start
   when :resume
-    ::Themis::Finals::Controllers::Contest.resume
+    competition_ctrl.enqueue_start
   when :pause
-    ::Themis::Finals::Controllers::Contest.pause
+    competition_ctrl.enqueue_pause
   when :finish
-    ::Themis::Finals::Controllers::Contest.enqueue_finish
+    competition_ctrl.enqueue_finish
   end
-end
-
-def estimate_completion
-  require './config'
-  require './lib/models/bootstrap'
-
-  ::Themis::Finals::Models.init
-  max_expired_at = ::Themis::Finals::Models::Flag.all_living.max :expired_at
-  approx_delay = ::Themis::Finals::Configuration.get_contest_flow.update_period
-  if max_expired_at.nil?
-      approx_end = ::DateTime.now
-  else
-      approx_end = max_expired_at
-  end
-
-  puts "Approximately at #{approx_end} + ~#{approx_delay}s"
 end
 
 namespace :competition do
@@ -106,7 +92,7 @@ namespace :competition do
     change_competition_stage :resume
   end
 
-  desc 'Pause competition'
+  desc 'Enqueue pause competition'
   task :pause do
     change_competition_stage :pause
   end
@@ -114,11 +100,6 @@ namespace :competition do
   desc 'Enqueue finish competition'
   task :finish do
     change_competition_stage(:finish)
-  end
-
-  desc 'Estimate competition completion time'
-  task :estimate_completion do
-    estimate_completion
   end
 end
 

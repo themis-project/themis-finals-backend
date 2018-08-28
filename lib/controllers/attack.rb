@@ -175,7 +175,7 @@ module Themis
 
           threshold =
             ::Time.now -
-            ::Themis::Finals::Configuration.get_contest_flow.attack_limit_period
+            ::Themis::Finals::Configuration.get_deprecated_settings.attack_limit_period
 
           attempt_count = ::Themis::Finals::Models::AttackAttempt.where(
             team: team,
@@ -186,7 +186,7 @@ module Themis
           ).count
 
           limit_attempts = \
-            ::Themis::Finals::Configuration.get_contest_flow.attack_limit_attempts
+            ::Themis::Finals::Configuration.get_deprecated_settings.attack_limit_attempts
 
           if attempt_count > limit_attempts
             r = ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT

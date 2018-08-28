@@ -5,7 +5,6 @@ require 'ip'
 require 'date'
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
-require './lib/controllers/contest'
 require './lib/utils/event_emitter'
 require './lib/controllers/scoreboard_state'
 require './lib/server/rack_monkey_patch'
@@ -15,6 +14,7 @@ require './lib/controllers/ctftime'
 require './lib/constants/submit_result'
 
 require './lib/controllers/identity'
+require './lib/controllers/competition'
 require './lib/controllers/competition_stage'
 
 module Themis
@@ -27,6 +27,7 @@ module Themis
           @identity_ctrl = ::Themis::Finals::Controllers::Identity.new
           @ctftime_ctrl = ::Themis::Finals::Controllers::CTFTime.new
           @competition_stage_ctrl = ::Themis::Finals::Controllers::CompetitionStage.new
+          @competition_ctrl = ::Themis::Finals::Controllers::Competition.new
         end
 
         configure do
@@ -463,7 +464,7 @@ module Themis
 
           begin
             request.body.rewind
-            payload = ::JSON.parse request.body.read
+            payload = ::JSON.parse(request.body.read)
           rescue => e
             halt 400
           end
@@ -475,7 +476,7 @@ module Themis
             if flag.nil?
               halt 400
             else
-              ::Themis::Finals::Controllers::Contest.handle_push(
+              @competition_ctrl.handle_push(
                 flag,
                 payload['status'],
                 payload['label'],
@@ -486,7 +487,7 @@ module Themis
             halt 400
           end
 
-          status 200
+          status 204
           body ''
         end
 
@@ -511,7 +512,7 @@ module Themis
             if poll.nil?
               halt 400
             else
-              ::Themis::Finals::Controllers::Contest.handle_poll(
+              @competition_ctrl.handle_pull(
                 poll,
                 payload['status'],
                 payload['message']
@@ -521,7 +522,7 @@ module Themis
             halt 400
           end
 
-          status 200
+          status 204
           body ''
         end
       end

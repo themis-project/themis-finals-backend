@@ -39,22 +39,10 @@ module Themis
 
         private
         def get_score(round, team)
-          score = ::Themis::Finals::Models::Score.first(
+          ::Themis::Finals::Models::Score.first(
             round_id: round.id,
             team_id: team.id
           )
-
-          # if score.nil?
-          #   score = ::Themis::Finals::Models::Score.create(
-          #     attack_points: 0.0,
-          #     availability_points: 0.0,
-          #     defence_points: 0.0,
-          #     team_id: team.id,
-          #     round_id: round.id
-          #   )
-          # end
-
-          score
         end
       end
     end

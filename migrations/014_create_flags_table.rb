@@ -6,7 +6,6 @@
       DateTime :created_at, null: false
       DateTime :pushed_at, null: true
       DateTime :expired_at, null: true
-      DateTime :considered_at, null: true
       String :label, text: true, null: false
       String :capsule, text: true, null: false
 

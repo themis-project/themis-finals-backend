@@ -17,7 +17,7 @@ gem 'sidekiq'
 gem 'jwt'
 gem 'terminal-table'
 gem 'time_difference'
-gem 'activesupport', '~> 5.1', '>= 5.1.4'
+gem 'activesupport'
 
 gem 'themis-finals-checker-result', '~> 1.0.0'
 gem 'themis-finals-attack-result', '~> 1.0.0'

@@ -1,3 +1,5 @@
+require 'date'
+
 module Themis
   module Finals
     module Models
@@ -12,6 +14,7 @@ module Themis
         database: ENV['PG_DATABASE']
       }
 
+      ::Sequel.datetime_class = ::DateTime
       DB = ::Sequel.connect(connection_params)
       DB.extension :pg_json
 
@@ -34,6 +37,7 @@ module Themis
       require './lib/models/attack'
       require './lib/models/scoreboard_position'
       require './lib/models/scoreboard_history_position'
+      require './lib/models/poll'
 
       def self.init
       end

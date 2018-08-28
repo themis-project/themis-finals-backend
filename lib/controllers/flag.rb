@@ -21,7 +21,6 @@ module Themis
                 created_at: created,
                 pushed_at: nil,
                 expired_at: nil,
-                considered_at: nil,
                 label: label,
                 capsule: encode(flag, created),
                 service_id: service.id,

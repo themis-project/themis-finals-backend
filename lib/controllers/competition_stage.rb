@@ -30,8 +30,8 @@ module Themis
           change_stage(::Themis::Finals::Const::CompetitionStage::STARTED)
         end
 
-        def resume
-          change_stage(::Themis::Finals::Const::CompetitionStage::STARTED)
+        def enqueue_pause
+          change_stage(::Themis::Finals::Const::CompetitionStage::PAUSING)
         end
 
         def pause

@@ -3,4 +3,6 @@ require './lib/models/bootstrap'
 require './lib/scheduler/init'
 
 ::Themis::Finals::Models.init
-::Themis::Finals::Scheduler.run
+
+scheduler = ::Themis::Finals::Scheduler.new
+scheduler.run
