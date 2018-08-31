@@ -32,6 +32,15 @@ module Themis
         def finished?
           stage == ::Themis::Finals::Const::CompetitionStage::FINISHED
         end
+
+        def any?(*stages)
+          stages.each do |stage|
+            method_name = (stage.to_s + '?').to_sym
+            return true if send(method_name)
+          end
+
+          return false
+        end
       end
     end
   end

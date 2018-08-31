@@ -12,23 +12,25 @@ module Themis
         one_to_many :flag_polls
 
         dataset_module do
-          def all_living
-            exclude(expired_at: nil).where('expired_at > ?', ::DateTime.now)
+          def living(cutoff)
+            exclude(expired_at: nil)
+            .where { expired_at > cutoff }
           end
 
           def failed(round)
-            where(round_id: round.id).where(expired_at: nil)
+            where(round_id: round.id)
+            .where(expired_at: nil)
           end
 
           def relevant(round)
-            where(round_id: round.id).exclude(expired_at: nil)
+            where(round_id: round.id)
+            .exclude(expired_at: nil)
           end
 
           def relevant_expired(round, cutoff)
-            where(round_id: round.id).exclude(expired_at: nil).where(
-              'expired_at < ?',
-              cutoff
-            )
+            where(round_id: round.id)
+            .exclude(expired_at: nil)
+            .where { expired_at < cutoff }
           end
         end
       end

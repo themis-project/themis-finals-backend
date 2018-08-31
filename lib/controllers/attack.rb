@@ -177,13 +177,10 @@ module Themis
             ::Time.now -
             ::Themis::Finals::Configuration.get_deprecated_settings.attack_limit_period
 
-          attempt_count = ::Themis::Finals::Models::AttackAttempt.where(
-            team: team,
-            deprecated_api: true
-          ).where(
-            'occured_at >= ?',
-            threshold.to_datetime
-          ).count
+          attempt_count = ::Themis::Finals::Models::AttackAttempt
+          .where(team: team, deprecated_api: true)
+          .where { occured_at >= threshold.to_datetime }
+          .count
 
           limit_attempts = \
             ::Themis::Finals::Configuration.get_deprecated_settings.attack_limit_attempts

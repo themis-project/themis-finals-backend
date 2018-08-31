@@ -13,8 +13,10 @@ require './lib/controllers/score'
 require './lib/controllers/scoreboard'
 require './lib/controllers/scoreboard_state'
 require './lib/controllers/flag'
+require './lib/controllers/flag_poll'
 require './lib/queue/tasks'
 require './lib/constants/flag_poll_state'
+require './lib/utils/logger'
 
 module Themis
   module Finals
@@ -29,30 +31,15 @@ module Themis
           @remote_checker_ctrl = ::Themis::Finals::Controllers::RemoteChecker.new
           @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
           @score_ctrl = ::Themis::Finals::Controllers::Score.new
+          @flag_poll_ctrl = ::Themis::Finals::Controllers::FlagPoll.new
 
           @settings = ::Themis::Finals::Configuration.get_settings
         end
 
         def init
           ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Configuration.get_teams.each do |team_opts|
-              ::Themis::Finals::Models::Team.create(
-                name: team_opts.name,
-                alias: team_opts.alias,
-                network: team_opts.network,
-                guest: team_opts.guest
-              )
-            end
-
-            ::Themis::Finals::Configuration.get_services.each do |service_opts|
-              ::Themis::Finals::Models::Service.create(
-                name: service_opts.name,
-                alias: service_opts.alias,
-                hostmask: service_opts.hostmask,
-                checker_endpoint: service_opts.checker_endpoint
-              )
-            end
-
+            @team_ctrl.init_teams
+            @service_ctrl.init_services
             @stage_ctrl.init
             ::Themis::Finals::Controllers::ScoreboardState.enable
           end
@@ -101,14 +88,15 @@ module Themis
 
         def can_poll?
           stage = @stage_ctrl.current
-          return false unless stage.started? || stage.pausing? || stage.finishing?
+          return false unless stage.any?(:started, :pausing, :finishing)
 
           cutoff = ::DateTime.now
           return @round_ctrl.can_poll?(cutoff)
         end
 
         def trigger_poll
-          flags = ::Themis::Finals::Models::Flag.all_living.all
+          cutoff = ::DateTime.now
+          flags = ::Themis::Finals::Models::Flag.living(cutoff).all
           poll = @round_ctrl.create_poll
 
           @team_ctrl.all_teams(true).each do |team|
@@ -128,8 +116,7 @@ module Themis
 
         def can_recalculate?
           stage = @stage_ctrl.current
-          stage_ok = stage.started? || stage.pausing? || stage.finishing?
-          stage_ok && !@round_ctrl.expired_rounds(::DateTime.now).empty?
+          stage.any?(:started, :pausing, :finishing) && !@round_ctrl.expired_rounds(::DateTime.now).empty?
         end
 
         def trigger_recalculate
@@ -142,7 +129,7 @@ module Themis
           end
 
           if positions_updated
-            update_total_scores
+            @score_ctrl.update_total_scores
 
             latest_positions = \
               ::Themis::Finals::Controllers::Scoreboard.format_team_positions(
@@ -194,30 +181,30 @@ module Themis
           @stage_ctrl.finish
         end
 
-        def handle_push(flag_model, status, label, message)
+        def handle_push(flag, status, label, message)
           ::Themis::Finals::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
           ) do
             if status == ::Themis::Finals::Checker::Result::UP
-              flag_model.pushed_at = ::DateTime.now
+              flag.pushed_at = ::DateTime.now
               expires = ::Time.now + @settings.flag_lifetime
-              flag_model.expired_at = expires.to_datetime
-              flag_model.label = label
-              flag_model.save
+              flag.expired_at = expires.to_datetime
+              flag.label = label
+              flag.save
 
               ::Themis::Finals::Models::DB.after_commit do
-                @logger.info("Successfully pushed flag `#{flag_model.flag}`!")
-                ::Themis::Finals::Queue::Tasks::PullFlag.perform_async(flag_model.flag)
+                @logger.info("Successfully pushed flag `#{flag.flag}`!")
+                ::Themis::Finals::Queue::Tasks::PullFlag.perform_async(flag.flag)
               end
             else
-              @logger.info("Failed to push flag `#{flag_model.flag}` (status code "\
+              @logger.info("Failed to push flag `#{flag.flag}` (status code "\
                            "#{status})!")
             end
 
             @team_service_state_ctrl.update_push_state(
-              flag_model.team,
-              flag_model.service,
+              flag.team,
+              flag.service,
               status,
               message
             )
@@ -255,30 +242,25 @@ module Themis
           end
         end
 
-        def pull_flag(flag_model)
-          team = flag_model.team
-          service = flag_model.service
-          round = flag_model.round
-          poll = nil
+        def pull_flag(flag)
+          team = flag.team
+          service = flag.service
+          round = flag.round
+          flag_poll = nil
 
           ::Themis::Finals::Models::DB.transaction do
-            poll = ::Themis::Finals::Models::FlagPoll.create(
-              state: ::Themis::Finals::Constants::FlagPollState::NOT_AVAILABLE,
-              created_at: ::DateTime.now,
-              updated_at: nil,
-              flag_id: flag_model.id
-            )
+            flag_poll = @flag_poll_ctrl.create_flag_poll(flag)
 
             ::Themis::Finals::Models::DB.after_commit do
-              @logger.info("Pulling flag `#{flag_model.flag}` from service "\
+              @logger.info("Pulling flag `#{flag.flag}` from service "\
                            "`#{service.name}` of `#{team.name}` ...")
               endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
               job_data = {
                 params: {
-                  request_id: poll.id,
+                  request_id: flag_poll.id,
                   endpoint: endpoint_addr.to_s,
-                  capsule: flag_model.capsule,
-                  label: flag_model.label
+                  capsule: flag.capsule,
+                  label: flag.label
                 },
                 metadata: {
                   timestamp: ::DateTime.now.to_s,
@@ -297,26 +279,26 @@ module Themis
 
         private
         def push_flag(team, service, round)
-          flag_model = nil
+          flag = nil
           ::Themis::Finals::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
           ) do
-            flag_model = ::Themis::Finals::Controllers::Flag.issue(
+            flag = ::Themis::Finals::Controllers::Flag.issue(
               team,
               service,
               round
             )
 
             ::Themis::Finals::Models::DB.after_commit do
-              @logger.info("Pushing flag `#{flag_model.flag}` to service "\
+              @logger.info("Pushing flag `#{flag.flag}` to service "\
                            "`#{service.name}` of `#{team.name}` ...")
               endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
               job_data = {
                 params: {
                   endpoint: endpoint_addr.to_s,
-                  capsule: flag_model.capsule,
-                  label: flag_model.label
+                  capsule: flag.capsule,
+                  label: flag.label
                 },
                 metadata: {
                   timestamp: ::DateTime.now.to_s,
@@ -334,15 +316,12 @@ module Themis
         end
 
         def recalculate_round(round)
-          rel_flags = ::Themis::Finals::Models::Flag.relevant(round)
-
           ::Themis::Finals::Models::DB.transaction do
-            init_round_scores(round)
-
+            rel_flags = ::Themis::Finals::Models::Flag.relevant(round)
             err_update = false
             rel_flags.each do |flag|
               begin
-                update_score(flag)
+                @score_ctrl.update_score(flag)
               rescue => e
                 @logger.error(e.to_s)
                 err_update = true
@@ -363,106 +342,6 @@ module Themis
           end
 
           true
-        end
-
-        def init_round_scores(round)
-          ::Themis::Finals::Models::Team.all.each do |team|
-            ::Themis::Finals::Models::Score.create(
-              attack_points: 0.0,
-              availability_points: 0.0,
-              defence_points: 0.0,
-              team_id: team.id,
-              round_id: round.id
-            )
-          end
-        end
-
-        def update_score(flag)
-          ::Themis::Finals::Models::DB.transaction(
-          ) do
-            polls = ::Themis::Finals::Models::FlagPoll
-            .where(flag_id: flag.id)
-            .exclude(state: ::Themis::Finals::Constants::FlagPollState::NOT_AVAILABLE)
-            .all
-
-            @score_ctrl.charge_availability(flag, polls)
-
-            attacks = flag.attacks
-            if attacks.count == 0
-              error_count = polls.count do |poll|
-                poll.state == ::Themis::Finals::Constants::FlagPollState::ERROR
-              end
-              success_count = polls.count do |poll|
-                poll.state == ::Themis::Finals::Constants::FlagPollState::SUCCESS
-              end
-              if error_count == 0 && success_count > 0
-                @score_ctrl.charge_defence(flag)
-              end
-            else
-              attacks.each do |attack|
-                begin
-                  @score_ctrl.charge_attack(flag, attack)
-                  ::Themis::Finals::Controllers::Attack.consider_attack(
-                    attack
-                  )
-                rescue => e
-                  @logger.error(e.to_s)
-                end
-              end
-            end
-          end
-        end
-
-        def update_total_scores
-          ::Themis::Finals::Models::Team.all.each do |team|
-            begin
-              update_total_score(team)
-            rescue => e
-              @logger.error(e.to_s)
-            end
-          end
-        end
-
-        def update_total_score(team)
-          ::Themis::Finals::Models::DB.transaction do
-            total_score = ::Themis::Finals::Models::TotalScore.first(
-              team_id: team.id
-            )
-            if total_score.nil?
-              total_score = ::Themis::Finals::Models::TotalScore.create(
-                attack_points: 0.0,
-                availability_points: 0.0,
-                defence_points: 0.0,
-                team_id: team.id
-              )
-            end
-
-            attack_points = 0.0
-            availability_points = 0.0
-            defence_points = 0.0
-
-            ::Themis::Finals::Models::Score.where(
-              team_id: team.id
-            ).each do |score|
-              attack_points += score.attack_points
-              availability_points += score.availability_points
-              defence_points += score.defence_points
-            end
-
-            total_score.attack_points = attack_points
-            total_score.availability_points = availability_points
-            total_score.defence_points = defence_points
-            total_score.save
-
-            ::Themis::Finals::Models::DB.after_commit do
-              @logger.info(
-                "Total score of team `#{team.name}` has been recalculated: "\
-                "attack - #{total_score.attack_points} pts, "\
-                "availability - #{total_score.availability_points}, "\
-                "defence - #{total_score.defence_points} pts"\
-              )
-            end
-          end
         end
       end
     end
