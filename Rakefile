@@ -10,11 +10,11 @@ namespace :db do
 
     connection_params = {
       adapter: 'postgres',
-      host: ENV['PG_HOST'],
-      port: ENV['PG_PORT'].to_i,
-      user: ENV['PG_USERNAME'],
-      password: ENV['PG_PASSWORD'],
-      database: ENV['PG_DATABASE']
+      host: ::ENV['PG_HOST'],
+      port: ::ENV['PG_PORT'].to_i,
+      user: ::ENV['PG_USERNAME'],
+      password: ::ENV['PG_PASSWORD'],
+      database: ::ENV['PG_DATABASE']
     }
 
     ::Sequel.connect(connection_params) do |db|
@@ -106,27 +106,28 @@ end
 def change_scoreboard_state(state)
   require './config'
   require './lib/models/bootstrap'
-  require './lib/controllers/scoreboard_state'
+  require './lib/controllers/scoreboard'
 
   ::Themis::Finals::Models.init
+  scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
 
   case state
   when :enabled
-    ::Themis::Finals::Controllers::ScoreboardState.enable
+    scoreboard_ctrl.enable_broadcast
   when :disabled
-    ::Themis::Finals::Controllers::ScoreboardState.disable
+    scoreboard_ctrl.disable_broadcast
   end
 end
 
 namespace :scoreboard do
   desc 'Enable scoreboard (for team and external networks)'
   task :enable do
-    change_scoreboard_state :enabled
+    change_scoreboard_state(:enabled)
   end
 
   desc 'Disable scoreboard (for team and external networks)'
   task :disable do
-    change_scoreboard_state :disabled
+    change_scoreboard_state(:disabled)
   end
 end
 

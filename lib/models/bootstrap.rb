@@ -7,11 +7,11 @@ module Themis
 
       connection_params = {
         adapter: 'postgres',
-        host: ENV['PG_HOST'],
-        port: ENV['PG_PORT'].to_i,
-        user: ENV['PG_USERNAME'],
-        password: ENV['PG_PASSWORD'],
-        database: ENV['PG_DATABASE']
+        host: ::ENV['PG_HOST'],
+        port: ::ENV['PG_PORT'].to_i,
+        user: ::ENV['PG_USERNAME'],
+        password: ::ENV['PG_PASSWORD'],
+        database: ::ENV['PG_DATABASE']
       }
 
       ::Sequel.datetime_class = ::DateTime

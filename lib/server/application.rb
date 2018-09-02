@@ -6,16 +6,15 @@ require 'date'
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
 require './lib/utils/event_emitter'
-require './lib/controllers/scoreboard_state'
 require './lib/server/rack_monkey_patch'
 require './lib/models/bootstrap'
-require './lib/controllers/scoreboard'
 require './lib/controllers/ctftime'
 require './lib/constants/submit_result'
 
 require './lib/controllers/identity'
 require './lib/controllers/competition'
 require './lib/controllers/competition_stage'
+require './lib/controllers/scoreboard'
 
 module Themis
   module Finals
@@ -28,6 +27,8 @@ module Themis
           @ctftime_ctrl = ::Themis::Finals::Controllers::CTFTime.new
           @competition_stage_ctrl = ::Themis::Finals::Controllers::CompetitionStage.new
           @competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+          @attack_ctrl = ::Themis::Finals::Controllers::Attack.new
+          @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
         end
 
         configure do
@@ -77,7 +78,7 @@ module Themis
             if @identity_ctrl.is_internal?(@remote_ip)
               false
             else
-              !::Themis::Finals::Controllers::ScoreboardState.is_enabled
+              !@scoreboard_ctrl.broadcast?
             end
 
           if muted
@@ -97,7 +98,7 @@ module Themis
             if @identity_ctrl.is_internal?(@remote_ip)
               false
             else
-              !::Themis::Finals::Controllers::ScoreboardState.is_enabled
+              !@scoreboard_ctrl.broadcast?
             end
 
           if muted
@@ -323,7 +324,7 @@ module Themis
           team = ::Themis::Finals::Models::Team[team_id]
           halt 404 if team.nil?
 
-          filename = ::File.join ENV['THEMIS_FINALS_TEAM_LOGO_DIR'], "#{team.alias}.png"
+          filename = ::File.join ::ENV['THEMIS_FINALS_TEAM_LOGO_DIR'], "#{team.alias}.png"
           unless ::File.exist? filename
             filename = ::File.join ::Dir.pwd, 'pictures', '__default.png'
           end
@@ -376,7 +377,7 @@ module Themis
               ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
           end
 
-          r = ::Themis::Finals::Controllers::Attack.process(team, flag_str)
+          r = @attack_ctrl.handle(team, flag_str)
           ::Themis::Finals::Constants::SubmitResult.key(r).to_s
         end
 
@@ -445,7 +446,7 @@ module Themis
           end
 
           r = payload.map do |flag|
-            ::Themis::Finals::Controllers::Attack.process_deprecated(team, flag)
+            @attack_ctrl.handle_deprecated(team, flag)
           end
 
           if r.count == 0

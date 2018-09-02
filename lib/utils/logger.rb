@@ -13,10 +13,10 @@ module Themis
             "[#{datetime}] #{severity} -- #{msg}\n"
           end
 
-          $stdout.sync = ENV['STDOUT_SYNC'] == 'true'
+          $stdout.sync = ::ENV['STDOUT_SYNC'] == 'true'
 
           # Setup log level
-          case ENV['LOG_LEVEL']
+          case ::ENV['LOG_LEVEL']
           when 'DEBUG'
             logger.level = ::Logger::DEBUG
           when 'INFO'

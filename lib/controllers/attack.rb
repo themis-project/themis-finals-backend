@@ -1,33 +1,65 @@
+require 'date'
+
 require 'themis/finals/attack/result'
+
+require './lib/controllers/team_service_state'
 require './lib/utils/event_emitter'
 require './lib/constants/submit_result'
 
 module Themis
   module Finals
     module Controllers
-      module Attack
-        def self.get_recent
-          attacks = []
-          ::Themis::Finals::Models::Team.all.each do |team|
-            attack = ::Themis::Finals::Models::Attack.last(
-              team_id: team.id,
-              considered: true
-            )
+      class Attack
+        def initialize
+          deprecated_settings = ::Themis::Finals::Configuration.get_deprecated_settings
+          @attack_limit_period = deprecated_settings.attack_limit_period
+          @attack_limit_attempts = deprecated_settings.attack_limit_attempts
 
-            unless attack.nil?
-              attacks << attack
-            end
+          @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
+        end
+
+        def handle(team, data)
+          cutoff = ::DateTime.now
+          attempt = ::Themis::Finals::Models::AttackAttempt.create(
+            occured_at: cutoff,
+            request: data.to_s,
+            response: ::Themis::Finals::Constants::SubmitResult::ERROR_UNKNOWN,
+            team_id: team.id,
+            deprecated_api: false
+          )
+
+          internal_process(cutoff, attempt, team, data)
+        end
+
+        def handle_deprecated(team, data)
+          cutoff = ::DateTime.now
+          attempt = ::Themis::Finals::Models::AttackAttempt.create(
+            occured_at: cutoff,
+            request: data.to_s,
+            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
+            team_id: team.id,
+            deprecated_api: true
+          )
+
+          threshold = (cutoff.to_time - @attack_limit_period).to_datetime
+
+          attempt_count = ::Themis::Finals::Models::AttackAttempt
+          .where(team: team, deprecated_api: true)
+          .where { occured_at >= threshold }
+          .count
+
+          if attempt_count > @attack_limit_attempts
+            r = ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT
+            attempt.response = r
+            attempt.save
+            return r
           end
 
-          attacks
+          internal_process(cutoff, attempt, team, data)
         end
 
-        def self.consider_attack(attack)
-          attack.considered = true
-          attack.save
-        end
-
-        def self.internal_process(attempt, team, data)
+        private
+        def internal_process(cutoff, attempt, team, data)
           old_code = attempt.deprecated_api
 
           unless data.respond_to?('match')
@@ -53,11 +85,7 @@ module Themis
             return r
           end
 
-          flag = ::Themis::Finals::Models::Flag.exclude(
-            pushed_at: nil
-          ).where(
-            flag: match_[0]
-          ).first
+          flag = ::Themis::Finals::Models::Flag.first_match(match_[0])
 
           if flag.nil?
             r = if old_code
@@ -81,21 +109,7 @@ module Themis
             return r
           end
 
-          team_service_push_state = ::Themis::Finals::Models::TeamServicePushState.first(
-            team_id: team.id,
-            service_id: flag.service_id
-          )
-          team_service_push_ok = \
-            !team_service_push_state.nil? && team_service_push_state.state == ::Themis::Finals::Constants::TeamServiceState::UP
-
-          team_service_pull_state = ::Themis::Finals::Models::TeamServicePullState.first(
-            team_id: team.id,
-            service_id: flag.service_id
-          )
-          team_service_pull_ok = \
-            !team_service_pull_state.nil? && team_service_pull_state.state == ::Themis::Finals::Constants::TeamServiceState::UP
-
-          unless team_service_push_ok && team_service_pull_ok
+          unless @team_service_state_ctrl.up?(team, flag.service)
             r = if old_code
               ::Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP
             else
@@ -106,7 +120,7 @@ module Themis
             return r
           end
 
-          if flag.expired_at.to_datetime < ::DateTime.now
+          if flag.expired_at < cutoff
             r = if old_code
               ::Themis::Finals::Attack::Result::ERR_FLAG_EXPIRED
             else
@@ -121,8 +135,8 @@ module Themis
           begin
             ::Themis::Finals::Models::DB.transaction do
               ::Themis::Finals::Models::Attack.create(
-                occured_at: ::DateTime.now,
-                considered: false,
+                occured_at: cutoff,
+                processed: false,
                 team_id: team.id,
                 flag_id: flag.id
               )
@@ -150,49 +164,6 @@ module Themis
           attempt.response = r
           attempt.save
           return r
-        end
-
-        def self.process(team, data)
-          attempt = ::Themis::Finals::Models::AttackAttempt.create(
-            occured_at: ::DateTime.now,
-            request: data.to_s,
-            response: ::Themis::Finals::Constants::SubmitResult::ERROR_UNKNOWN,
-            team_id: team.id,
-            deprecated_api: false
-          )
-
-          internal_process(attempt, team, data)
-        end
-
-        def self.process_deprecated(team, data)
-          attempt = ::Themis::Finals::Models::AttackAttempt.create(
-            occured_at: ::DateTime.now,
-            request: data.to_s,
-            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
-            team_id: team.id,
-            deprecated_api: true
-          )
-
-          threshold =
-            ::Time.now -
-            ::Themis::Finals::Configuration.get_deprecated_settings.attack_limit_period
-
-          attempt_count = ::Themis::Finals::Models::AttackAttempt
-          .where(team: team, deprecated_api: true)
-          .where { occured_at >= threshold.to_datetime }
-          .count
-
-          limit_attempts = \
-            ::Themis::Finals::Configuration.get_deprecated_settings.attack_limit_attempts
-
-          if attempt_count > limit_attempts
-            r = ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT
-            attempt.response = r
-            attempt.save
-            return r
-          end
-
-          internal_process(attempt, team, data)
         end
       end
     end

@@ -9,6 +9,22 @@ module Themis
   module Finals
     module Controllers
       class TeamServiceState
+        def up?(team, service)
+          push = ::Themis::Finals::Models::TeamServicePushState.first(
+            team_id: team.id,
+            service_id: service.id
+          )
+          push_ok = !push.nil? && push.state == ::Themis::Finals::Constants::TeamServiceState::UP
+
+          pull = ::Themis::Finals::Models::TeamServicePullState.first(
+            team_id: team.id,
+            service_id: service.id
+          )
+          pull_ok = !pull.nil? && pull.state == ::Themis::Finals::Constants::TeamServiceState::UP
+
+          push_ok && pull_ok
+        end
+
         def update_push_state(team, service, status, message)
           ::Themis::Finals::Models::DB.transaction do
             service_state = get_service_state(status)

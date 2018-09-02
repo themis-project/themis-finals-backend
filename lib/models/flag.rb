@@ -32,6 +32,10 @@ module Themis
             .exclude(expired_at: nil)
             .where { expired_at < cutoff }
           end
+
+          def first_match(s)
+            exclude(pushed_at: nil).first(flag: s)
+          end
         end
       end
     end

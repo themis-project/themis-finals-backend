@@ -30,9 +30,8 @@ module Themis
               attacks.each do |attack|
                 begin
                   charge_attack(flag, attack)
-                  ::Themis::Finals::Controllers::Attack.consider_attack(
-                    attack
-                  )
+                  attack.processed = true
+                  attack.save
                 rescue => e
                   @logger.error(e.to_s)
                 end
@@ -105,7 +104,7 @@ module Themis
               attack_points: 1.0,
               availability_points: 0.0,
               defence_points: 0.0,
-              team_id: flag.team.id,
+              team_id: attack.team.id,
               round_id: flag.round.id
             )
           end

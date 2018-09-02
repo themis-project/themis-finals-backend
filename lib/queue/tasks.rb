@@ -9,11 +9,11 @@ require './lib/utils/logger'
 logger = ::Themis::Finals::Utils::Logger.get
 
 config_redis = {
-  url: "redis://#{ENV['REDIS_HOST']}:#{ENV['REDIS_PORT']}/#{ENV['THEMIS_FINALS_QUEUE_REDIS_DB']}"
+  url: "redis://#{::ENV['REDIS_HOST']}:#{::ENV['REDIS_PORT']}/#{::ENV['THEMIS_FINALS_QUEUE_REDIS_DB']}"
 }
 
-unless ENV.fetch('REDIS_PASSWORD', nil).nil?
-  config_redis[:password] = ENV['REDIS_PASSWORD']
+unless ::ENV.fetch('REDIS_PASSWORD', nil).nil?
+  config_redis[:password] = ::ENV['REDIS_PASSWORD']
 end
 
 ::Sidekiq.default_worker_options = { 'retry' => 0 }
@@ -22,7 +22,7 @@ end
   config.redis = config_redis
 
   config.on(:startup) do
-    logger.info "Starting queue process, instance #{ENV['QUEUE_INSTANCE']}"
+    logger.info "Starting queue process, instance #{::ENV['QUEUE_INSTANCE']}"
     require './config'
     ::Themis::Finals::Models.init
   end

@@ -37,12 +37,12 @@ module Themis
         def ensure_connection
           return unless @_client.nil?
           connection_params = {
-            host: ENV['REDIS_HOST'] || '127.0.0.1',
-            port: ENV['REDIS_PORT'].to_i || 6379,
-            db: ENV['THEMIS_FINALS_STREAM_REDIS_DB'].to_i || 0
+            host: ::ENV['REDIS_HOST'] || '127.0.0.1',
+            port: ::ENV['REDIS_PORT'].to_i || 6379,
+            db: ::ENV['THEMIS_FINALS_STREAM_REDIS_DB'].to_i || 0
           }
-          unless ENV.fetch('REDIS_PASSWORD', nil).nil?
-            connection_params[:password] = ENV['REDIS_PASSWORD']
+          unless ::ENV.fetch('REDIS_PASSWORD', nil).nil?
+            connection_params[:password] = ::ENV['REDIS_PASSWORD']
           end
           @_client = ::Redis.new(**connection_params)
         end

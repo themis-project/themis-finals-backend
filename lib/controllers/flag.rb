@@ -1,50 +1,68 @@
-require './lib/utils/flag_generator'
-require './lib/utils/logger'
+require 'date'
+require 'openssl'
+require 'securerandom'
+require 'digest/md5'
+require 'base64'
 
 require 'jwt'
-require 'openssl'
+
+require './lib/utils/logger'
 
 module Themis
   module Finals
     module Controllers
-      module Flag
-        @logger = ::Themis::Finals::Utils::Logger.get
+      class Flag
+        def initialize
+          @logger = ::Themis::Finals::Utils::Logger.get
+          @key = ::OpenSSL::PKey.read(::ENV['THEMIS_FINALS_FLAG_SIGN_KEY_PRIVATE'].gsub('\n', "\n"))
+          @alg = 'none'
+          if @key.class == ::OpenSSL::PKey::RSA
+            @alg = 'RS256'
+          elsif @key.class == ::OpenSSL::PKey::EC
+            @alg = 'ES256'
+          end
 
-        def self.issue(team, service, round)
-          flag_model = nil
+          @prefix = ::ENV['THEMIS_FINALS_FLAG_WRAP_PREFIX']
+          @suffix = ::ENV['THEMIS_FINALS_FLAG_WRAP_SUFFIX']
+          @generator_secret = ::Base64.urlsafe_decode64(
+            ::ENV['THEMIS_FINALS_FLAG_GENERATOR_SECRET']
+          )
+        end
+
+        def issue(team, service, round)
+          model = nil
 
           ::Themis::Finals::Models::DB.transaction do
-              flag, label = ::Themis::Finals::Utils::FlagGenerator.generate_flag
+              flag, label = generate_flag_label
               created = ::DateTime.now
-              flag_model = ::Themis::Finals::Models::Flag.create(
+              model = ::Themis::Finals::Models::Flag.create(
                 flag: flag,
                 created_at: created,
                 pushed_at: nil,
                 expired_at: nil,
                 label: label,
-                capsule: encode(flag, created),
+                capsule: encode(flag),
                 service_id: service.id,
                 team_id: team.id,
                 round_id: round.id
               )
           end
 
-          flag_model
+          model
         end
 
-        def self.encode(flag, created)
-          key = ::OpenSSL::PKey.read(::ENV['THEMIS_FINALS_FLAG_SIGN_KEY_PRIVATE'].gsub('\n', "\n"))
-          payload = { 'flag' => flag }
-          alg = 'none'
-          if key.class == ::OpenSSL::PKey::RSA
-            alg = 'RS256'
-          elsif key.class == ::OpenSSL::PKey::EC
-            alg = 'ES256'
-          end
+        private
+        def encode(s)
+          "#{@prefix}#{::JWT.encode({'flag' => s}, @key, @alg)}#{@suffix}"
+        end
 
-          "#{::ENV['THEMIS_FINALS_FLAG_WRAP_PREFIX']}"\
-          "#{::JWT.encode(payload, key, alg)}"\
-          "#{::ENV['THEMIS_FINALS_FLAG_WRAP_SUFFIX']}"
+        def generate_flag_label
+          src = ::Digest::MD5.new
+          src << ::SecureRandom.random_bytes(32)
+          src << @generator_secret
+          flag = "#{src.hexdigest}="
+          label = ::SecureRandom.uuid
+          return flag, label
         end
       end
     end

@@ -11,7 +11,6 @@ require './lib/controllers/remote_checker'
 require './lib/controllers/team_service_state'
 require './lib/controllers/score'
 require './lib/controllers/scoreboard'
-require './lib/controllers/scoreboard_state'
 require './lib/controllers/flag'
 require './lib/controllers/flag_poll'
 require './lib/queue/tasks'
@@ -32,6 +31,8 @@ module Themis
           @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
           @score_ctrl = ::Themis::Finals::Controllers::Score.new
           @flag_poll_ctrl = ::Themis::Finals::Controllers::FlagPoll.new
+          @flag_ctrl = ::Themis::Finals::Controllers::Flag.new
+          @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
 
           @settings = ::Themis::Finals::Configuration.get_settings
         end
@@ -41,7 +42,7 @@ module Themis
             @team_ctrl.init_teams
             @service_ctrl.init_services
             @stage_ctrl.init
-            ::Themis::Finals::Controllers::ScoreboardState.enable
+            @scoreboard_ctrl.enable_broadcast
           end
         end
 
@@ -130,38 +131,7 @@ module Themis
 
           if positions_updated
             @score_ctrl.update_total_scores
-
-            latest_positions = \
-              ::Themis::Finals::Controllers::Scoreboard.format_team_positions(
-                ::Themis::Finals::Controllers::Scoreboard.get_team_positions
-              )
-
-            ::Themis::Finals::Models::DB.transaction do
-              ::Themis::Finals::Models::ScoreboardPosition.create(
-                created_at: ::DateTime.now,
-                data: latest_positions
-              )
-
-              event_data = {
-                muted: false,
-                positions: latest_positions
-              }
-
-              if ::Themis::Finals::Controllers::ScoreboardState.is_enabled
-                ::Themis::Finals::Utils::EventEmitter.broadcast(
-                  'scoreboard',
-                  event_data
-                )
-              else
-                ::Themis::Finals::Utils::EventEmitter.emit(
-                  'scoreboard',
-                  event_data,
-                  true,
-                  false,
-                  false
-                )
-              end
-            end
+            @scoreboard_ctrl.update
           end
         end
 
@@ -187,9 +157,10 @@ module Themis
             num_retries: nil
           ) do
             if status == ::Themis::Finals::Checker::Result::UP
-              flag.pushed_at = ::DateTime.now
-              expires = ::Time.now + @settings.flag_lifetime
-              flag.expired_at = expires.to_datetime
+              cutoff = ::DateTime.now
+              flag.pushed_at = cutoff
+              expires = (cutoff.to_time + @settings.flag_lifetime).to_datetime
+              flag.expired_at = expires
               flag.label = label
               flag.save
 
@@ -268,7 +239,7 @@ module Themis
                   team_name: team.name,
                   service_name: service.name
                 },
-                report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_pull"
+                report_url: "http://#{::ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_pull"
               }.to_json
 
               call_res = @remote_checker_ctrl.pull(service.checker_endpoint, job_data)
@@ -279,16 +250,11 @@ module Themis
 
         private
         def push_flag(team, service, round)
-          flag = nil
           ::Themis::Finals::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
           ) do
-            flag = ::Themis::Finals::Controllers::Flag.issue(
-              team,
-              service,
-              round
-            )
+            flag = @flag_ctrl.issue(team, service, round)
 
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info("Pushing flag `#{flag.flag}` to service "\
@@ -306,7 +272,7 @@ module Themis
                   team_name: team.name,
                   service_name: service.name
                 },
-                report_url: "http://#{ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_push"
+                report_url: "http://#{::ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_push"
               }.to_json
 
               call_res = @remote_checker_ctrl.push(service.checker_endpoint, job_data)
