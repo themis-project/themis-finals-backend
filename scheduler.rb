@@ -1,4 +1,3 @@
-require './config'
 require './lib/models/bootstrap'
 require './lib/scheduler/init'
 

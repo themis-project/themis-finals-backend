@@ -1,6 +1,6 @@
 module Themis
   module Finals
-    module Configuration
+    module Domain
       def self.team(name, &block)
         team_dsl = TeamDSL.new name
         team_dsl.instance_eval &block

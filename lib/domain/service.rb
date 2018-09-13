@@ -1,6 +1,6 @@
 module Themis
   module Finals
-    module Configuration
+    module Domain
       def self.service(name, &block)
         service_dsl = ServiceDSL.new name
         service_dsl.instance_eval &block
@@ -12,13 +12,15 @@ module Themis
       end
 
       class Service
-        attr_accessor :alias, :name, :hostmask, :checker_endpoint
+        attr_accessor :alias, :name, :hostmask, :checker_endpoint, :attack_priority,
+                      :enable_in, :disable_in
 
         def initialize(service_alias)
           @alias = service_alias
           @name = nil
           @hostmask = nil
           @checker_endpoint = nil
+          @attack_priority = false
         end
       end
 
@@ -39,6 +41,10 @@ module Themis
 
         def checker_endpoint(checker_endpoint)
           @service.checker_endpoint = checker_endpoint
+        end
+
+        def attack_priority(attack_priority)
+          @service.attack_priority = attack_priority
         end
       end
 

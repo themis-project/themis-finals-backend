@@ -123,12 +123,7 @@ module Themis
         end
 
         get '/api/services' do
-          json ::Themis::Finals::Models::Service.map { |service|
-            {
-              id: service.id,
-              name: service.name
-            }
-          }
+          json ::Themis::Finals::Models::Service.enabled.map { |s| s.serialize }
         end
 
         get '/api/posts' do

@@ -1,6 +1,6 @@
 module Themis
   module Finals
-    module Configuration
+    module Domain
       def self.deprecated_settings(&block)
         deprecated_settings_dsl = DeprecatedSettingsDSL.new
         deprecated_settings_dsl.instance_eval &block

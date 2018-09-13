@@ -23,7 +23,6 @@ end
 
   config.on(:startup) do
     logger.info "Starting queue process, instance #{::ENV['QUEUE_INSTANCE']}"
-    require './config'
     ::Themis::Finals::Models.init
   end
   config.on(:quiet) do
@@ -44,6 +43,7 @@ module Themis
       module Tasks
         class Planner
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform
             competition_ctrl = ::Themis::Finals::Controllers::Competition.new
@@ -71,6 +71,7 @@ module Themis
 
         class TriggerRound
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform
             competition_ctrl = ::Themis::Finals::Controllers::Competition.new
@@ -80,6 +81,7 @@ module Themis
 
         class TriggerPoll
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform
             competition_ctrl = ::Themis::Finals::Controllers::Competition.new
@@ -89,6 +91,7 @@ module Themis
 
         class TriggerRecalculate
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform
             competition_ctrl = ::Themis::Finals::Controllers::Competition.new
@@ -98,6 +101,7 @@ module Themis
 
         class TriggerPause
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform
             competition_ctrl = ::Themis::Finals::Controllers::Competition.new
@@ -107,6 +111,7 @@ module Themis
 
         class TriggerFinish
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform
             competition_ctrl = ::Themis::Finals::Controllers::Competition.new
@@ -116,6 +121,7 @@ module Themis
 
         class PullFlag
           include ::Sidekiq::Worker
+          sidekiq_options :retry => false
 
           def perform(flag_str)
             flag = ::Themis::Finals::Models::Flag.first(flag: flag_str)

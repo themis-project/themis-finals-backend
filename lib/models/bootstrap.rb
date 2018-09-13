@@ -38,6 +38,7 @@ module Themis
       require './lib/models/scoreboard_position'
       require './lib/models/scoreboard_history_position'
       require './lib/models/poll'
+      require './lib/models/configuration'
 
       def self.init
       end

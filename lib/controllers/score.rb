@@ -3,6 +3,7 @@ require 'sequel'
 require './lib/constants/flag_poll_state'
 require './lib/utils/logger'
 require './lib/controllers/attack'
+require './lib/controllers/service'
 
 module Themis
   module Finals
@@ -10,6 +11,7 @@ module Themis
       class Score
         def initialize
           @logger = ::Themis::Finals::Utils::Logger.get
+          @service_ctrl = ::Themis::Finals::Controllers::Service.new
         end
 
         def update_score(flag)
@@ -23,7 +25,7 @@ module Themis
               error_count = polls.count { |p| p.error? }
               success_count = polls.count { |p| p.success? }
 
-              if error_count == 0 && success_count > 0
+              if error_count == 0 && success_count > 0 && @service_ctrl.can_award_defence?(flag.service, flag.round)
                 charge_defence(flag)
               end
             else

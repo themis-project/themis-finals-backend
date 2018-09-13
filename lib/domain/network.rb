@@ -1,9 +1,8 @@
 require 'ip'
-require './lib/configuration/team'
 
 module Themis
   module Finals
-    module Configuration
+    module Domain
       def self.network(&block)
         network_dsl = NetworkDSL.new
         network_dsl.instance_eval &block

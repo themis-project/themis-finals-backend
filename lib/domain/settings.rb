@@ -1,6 +1,6 @@
 module Themis
   module Finals
-    module Configuration
+    module Domain
       def self.settings(&block)
         settings_dsl = SettingsDSL.new
         settings_dsl.instance_eval &block

@@ -16,6 +16,7 @@ require './lib/controllers/flag_poll'
 require './lib/queue/tasks'
 require './lib/constants/flag_poll_state'
 require './lib/utils/logger'
+require './lib/controllers/domain'
 
 module Themis
   module Finals
@@ -33,14 +34,13 @@ module Themis
           @flag_poll_ctrl = ::Themis::Finals::Controllers::FlagPoll.new
           @flag_ctrl = ::Themis::Finals::Controllers::Flag.new
           @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
-
-          @settings = ::Themis::Finals::Configuration.get_settings
+          @domain_ctrl = ::Themis::Finals::Controllers::Domain.new
         end
 
         def init
           ::Themis::Finals::Models::DB.transaction do
-            @team_ctrl.init_teams
-            @service_ctrl.init_services
+            @domain_ctrl.init
+            @service_ctrl.enable_all
             @stage_ctrl.init
             @scoreboard_ctrl.enable_broadcast
           end
@@ -76,8 +76,10 @@ module Themis
 
           round = @round_ctrl.create_round
 
+          @service_ctrl.ensure_enable(round)
+
           @team_ctrl.all_teams(true).each do |team|
-            @service_ctrl.all_services(true).each do |service|
+            @service_ctrl.enabled_services(shuffle: true, round: round).each do |service|
               begin
                 push_flag(team, service, round)
               rescue => e
@@ -101,7 +103,7 @@ module Themis
           poll = @round_ctrl.create_poll
 
           @team_ctrl.all_teams(true).each do |team|
-            @service_ctrl.all_services(true).each do |service|
+            @service_ctrl.enabled_services(shuffle: true).each do |service|
               flag = flags.select { |f| f.team_id == team.id && f.service_id == service.id }.sample
 
               unless flag.nil?
@@ -152,6 +154,8 @@ module Themis
         end
 
         def handle_push(flag, status, label, message)
+          return unless @domain_ctrl.available?
+
           ::Themis::Finals::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
@@ -159,7 +163,7 @@ module Themis
             if status == ::Themis::Finals::Checker::Result::UP
               cutoff = ::DateTime.now
               flag.pushed_at = cutoff
-              expires = (cutoff.to_time + @settings.flag_lifetime).to_datetime
+              expires = (cutoff.to_time + @domain_ctrl.settings.flag_lifetime).to_datetime
               flag.expired_at = expires
               flag.label = label
               flag.save
@@ -301,6 +305,8 @@ module Themis
             round.finished_at = ::DateTime.now
             round.save
             round_num = round.id
+
+            @service_ctrl.ensure_disable(round)
 
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info("Round #{round_num} finished!")

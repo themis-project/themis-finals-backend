@@ -11,9 +11,9 @@ module Themis
           shuffle ? res.shuffle : res
         end
 
-        def init_teams
+        def init_teams(entries)
           ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Configuration.get_teams.each { |p| create_team(p) }
+            entries.each { |p| create_team(p) }
           end
         end
 

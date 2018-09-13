@@ -1,11 +1,11 @@
 require 'dotenv'
 ::Dotenv.load
+require 'optparse'
 
 namespace :db do
   desc 'Clear database'
   task :reset do
     require 'rubygems'
-    require './config'
     require 'sequel'
 
     connection_params = {
@@ -19,6 +19,7 @@ namespace :db do
 
     ::Sequel.connect(connection_params) do |db|
       %w(
+        configurations
         scoreboard_positions
         scoreboard_history_positions
         server_sent_events
@@ -51,11 +52,12 @@ namespace :db do
     ::Sequel.connect(connection_params) do |db|
       ::Sequel::Migrator.run(db, 'migrations')
     end
+
+    puts 'OK'
   end
 end
 
 def change_competition_stage(command)
-  require './config'
   require './lib/models/bootstrap'
   require './lib/controllers/competition'
 
@@ -74,11 +76,15 @@ def change_competition_stage(command)
   when :finish
     competition_ctrl.enqueue_finish
   end
+
+  puts 'OK'
 end
 
 namespace :competition do
   desc 'Init competition'
-  task :init do
+  task :init, [:domain] do |_, args|
+    require './lib/domain/init'
+    require args[:domain]
     change_competition_stage(:init)
   end
 
@@ -104,7 +110,6 @@ namespace :competition do
 end
 
 def change_scoreboard_state(state)
-  require './config'
   require './lib/models/bootstrap'
   require './lib/controllers/scoreboard'
 
@@ -131,10 +136,48 @@ namespace :scoreboard do
   end
 end
 
+namespace :service do
+  desc 'Initialize a new service from domain file'
+  task :init, [:domain] do |_, args|
+    require './lib/domain/init'
+    require args[:domain]
+    require './lib/models/bootstrap'
+    require './lib/controllers/domain'
+
+    ::Themis::Finals::Models.init
+    domain_ctrl = ::Themis::Finals::Controllers::Domain.new
+    domain_ctrl.update
+    puts 'OK'
+  end
+
+  desc 'Disable a service in a certain round'
+  task :disable, [:alias, :round] do |_, args|
+    require './lib/domain/init'
+    require './lib/models/bootstrap'
+    require './lib/controllers/service'
+
+    ::Themis::Finals::Models.init
+    service_ctrl = ::Themis::Finals::Controllers::Service.new
+    service_ctrl.enqueue_disable(args[:alias], args[:round].to_i)
+    puts 'OK'
+  end
+
+  desc 'Enable a service in a certain round'
+  task :enable, [:alias, :round] do |_, args|
+    require './lib/domain/init'
+    require './lib/models/bootstrap'
+    require './lib/controllers/service'
+
+    ::Themis::Finals::Models.init
+    service_ctrl = ::Themis::Finals::Controllers::Service.new
+    service_ctrl.enqueue_enable(args[:alias], args[:round].to_i)
+    puts 'OK'
+  end
+end
+
 namespace :report do
   desc 'Show global stats'
   task :global_stats do
-    require './config'
     require './lib/models/bootstrap'
     require 'terminal-table'
     require 'time_difference'
@@ -188,7 +231,6 @@ namespace :report do
 
   desc 'Show flag stats'
   task :flag_stats do
-    require './config'
     require './lib/models/bootstrap'
     require './lib/constants/team_service_state'
     require 'terminal-table'
@@ -265,7 +307,6 @@ namespace :report do
 
   desc 'Show attack stats'
   task :attack_stats do
-    require './config'
     require './lib/models/bootstrap'
     # require './lib/constants/team_service_state'
     require 'terminal-table'
@@ -316,7 +357,6 @@ namespace :report do
 
   desc 'Show services which have been attacked by teams'
   task :team_services do
-    require './config'
     require './lib/models/bootstrap'
     ::Themis::Finals::Models.init
 

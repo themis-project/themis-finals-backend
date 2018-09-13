@@ -1,8 +1,6 @@
-require './lib/configuration/init'
-
 module Themis
   module Finals
-    module Configuration
+    module Domain
       network do
         internal '172.20.0.0/24'  # internal network (for contest organizers)
       end
