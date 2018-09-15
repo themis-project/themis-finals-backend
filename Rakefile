@@ -1,6 +1,6 @@
 require 'dotenv'
 ::Dotenv.load
-require 'optparse'
+require 'fileutils'
 
 namespace :db do
   desc 'Clear database'
@@ -52,6 +52,8 @@ namespace :db do
     ::Sequel.connect(connection_params) do |db|
       ::Sequel::Migrator.run(db, 'migrations')
     end
+
+    ::FileUtils.rm_f(::Dir.glob("#{::ENV['THEMIS_FINALS_TEAM_LOGO_DIR']}/*"))
 
     puts 'OK'
   end

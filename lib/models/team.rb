@@ -9,6 +9,15 @@ module Themis
         one_to_many :attack_attempts
         one_to_many :attacks
         one_to_one :total_score
+
+        def serialize
+          {
+            id: id,
+            name: name,
+            guest: guest,
+            logo_hash: logo_hash
+          }
+        end
       end
     end
   end

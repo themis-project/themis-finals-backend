@@ -1,9 +1,11 @@
 require 'sidekiq'
+require 'mini_magick'
 
 require './lib/models/bootstrap'
 require './lib/utils/logger'
 require './lib/controllers/competition_stage'
 require './lib/controllers/competition'
+require './lib/controllers/image'
 require './lib/utils/logger'
 
 logger = ::Themis::Finals::Utils::Logger.get
@@ -14,6 +16,10 @@ config_redis = {
 
 unless ::ENV.fetch('REDIS_PASSWORD', nil).nil?
   config_redis[:password] = ::ENV['REDIS_PASSWORD']
+end
+
+::MiniMagick.configure do |config|
+  config.cli = :graphicsmagick
 end
 
 ::Sidekiq.default_worker_options = { 'retry' => 0 }
@@ -129,6 +135,18 @@ module Themis
               competition_ctrl = ::Themis::Finals::Controllers::Competition.new
               competition_ctrl.pull_flag(flag)
             end
+          end
+        end
+
+        class ResizeImage
+          include ::Sidekiq::Worker
+          sidekiq_options :retry => false
+
+          def perform(path, team_id)
+            team = ::Themis::Finals::Models::Team[team_id]
+            return if team.nil?
+            image_ctrl = ::Themis::Finals::Controllers::Image.new
+            image_ctrl.resize(path, team)
           end
         end
       end

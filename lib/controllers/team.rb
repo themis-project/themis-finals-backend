@@ -23,7 +23,8 @@ module Themis
             name: opts.name,
             alias: opts.alias,
             network: opts.network,
-            guest: opts.guest
+            guest: opts.guest,
+            logo_hash: nil
           )
         end
       end

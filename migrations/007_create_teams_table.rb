@@ -6,6 +6,7 @@
       String :alias, size: 50, null: false, unique: true
       String :network, size: 18, null: false, unique: true
       TrueClass :guest, null: false, default: false
+      String :logo_hash, size: 64, null: true, default: nil
     end
   end
 

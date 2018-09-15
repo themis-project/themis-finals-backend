@@ -3,9 +3,13 @@ require 'sinatra/json'
 require 'json'
 require 'ip'
 require 'date'
+require 'tempfile'
+require 'mini_magick'
+
 require 'themis/finals/attack/result'
 require './lib/controllers/attack'
 require './lib/utils/event_emitter'
+require './lib/utils/tempfile_monkey_patch'
 require './lib/server/rack_monkey_patch'
 require './lib/models/bootstrap'
 require './lib/controllers/ctftime'
@@ -15,6 +19,7 @@ require './lib/controllers/identity'
 require './lib/controllers/competition'
 require './lib/controllers/competition_stage'
 require './lib/controllers/scoreboard'
+require './lib/controllers/image'
 
 module Themis
   module Finals
@@ -29,6 +34,11 @@ module Themis
           @competition_ctrl = ::Themis::Finals::Controllers::Competition.new
           @attack_ctrl = ::Themis::Finals::Controllers::Attack.new
           @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
+          @image_ctrl = ::Themis::Finals::Controllers::Image.new
+
+          ::MiniMagick.configure do |config|
+            config.cli = :graphicsmagick
+          end
         end
 
         configure do
@@ -113,13 +123,7 @@ module Themis
         end
 
         get '/api/teams' do
-          json ::Themis::Finals::Models::Team.map { |team|
-            {
-              id: team.id,
-              name: team.name,
-              guest: team.guest
-            }
-          }
+          json ::Themis::Finals::Models::Team.map { |t| t.serialize }
         end
 
         get '/api/services' do
@@ -258,6 +262,40 @@ module Themis
           body ''
         end
 
+        post '/api/team/logo' do
+          team = @identity_ctrl.get_team(@remote_ip)
+
+          if team.nil?
+            halt 401, 'Unauthorized'
+          end
+
+          unless params[:file]
+            halt 400, 'No file'
+          end
+
+          path = nil
+          upload = params[:file][:tempfile]
+          extension = ::File.extname(params[:file][:filename])
+          t = Tempfile.open(['logo', extension], ::ENV['THEMIS_FINALS_UPLOAD_DIR']) do |f|
+            f.write(upload.read)
+            path = f.path
+            f.persist  # introduced by a monkey patch
+          end
+
+          image = @image_ctrl.load(path)
+          if image.nil?
+            halt 400, 'Error processing image'
+          end
+
+          if image.width != image.height
+            halt 400, 'Image width must equal its height'
+          end
+
+          @image_ctrl.perform_resize(path, team.id)
+          status 201
+          body 'OK'
+        end
+
         get '/api/team/service/push-states' do
           identity = nil
 
@@ -314,14 +352,14 @@ module Themis
           }
         end
 
-        get %r{^/api/team/pictures/(\d{1,2})$} do |team_id_str|
+        get %r{^/api/team/logo/(\d{1,2})\.png$} do |team_id_str|
           team_id = team_id_str.to_i
           team = ::Themis::Finals::Models::Team[team_id]
           halt 404 if team.nil?
 
-          filename = ::File.join ::ENV['THEMIS_FINALS_TEAM_LOGO_DIR'], "#{team.alias}.png"
-          unless ::File.exist? filename
-            filename = ::File.join ::Dir.pwd, 'pictures', '__default.png'
+          filename = ::File.join(::ENV['THEMIS_FINALS_TEAM_LOGO_DIR'], "#{team.alias}.png")
+          unless ::File.exist?(filename)
+            filename = ::File.join(::Dir.pwd, 'logo', 'default.png')
           end
 
           send_file filename
