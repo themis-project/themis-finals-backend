@@ -20,6 +20,7 @@ require './lib/controllers/competition'
 require './lib/controllers/competition_stage'
 require './lib/controllers/scoreboard'
 require './lib/controllers/image'
+require './lib/controllers/score'
 
 module Themis
   module Finals
@@ -35,6 +36,7 @@ module Themis
           @attack_ctrl = ::Themis::Finals::Controllers::Attack.new
           @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
           @image_ctrl = ::Themis::Finals::Controllers::Image.new
+          @score_ctrl = ::Themis::Finals::Controllers::Score.new
 
           ::MiniMagick.configure do |config|
             config.cli = :graphicsmagick
@@ -294,6 +296,28 @@ module Themis
           @image_ctrl.perform_resize(path, team.id)
           status 201
           body 'OK'
+        end
+
+        get %r{^/api/team/(\d{1,2})/stats$} do |team_id_str|
+          unless @identity_ctrl.is_internal?(@remote_ip)
+            halt 401
+          end
+
+          team_id = team_id_str.to_i
+          team = ::Themis::Finals::Models::Team[team_id]
+          halt 404 if team.nil?
+
+          json @score_ctrl.get_team_scores(team).map { |s| s.serialize }
+        end
+
+        get '/api/team/stats' do
+          team = @identity_ctrl.get_team(@remote_ip)
+
+          if team.nil?
+            halt 401, 'Unauthorized'
+          end
+
+          json @score_ctrl.get_team_scores(team).map { |s| s.serialize }
         end
 
         get '/api/team/service/push-states' do

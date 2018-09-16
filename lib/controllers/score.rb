@@ -14,6 +14,16 @@ module Themis
           @service_ctrl = ::Themis::Finals::Controllers::Service.new
         end
 
+        def init_scores(round)
+          ::Themis::Finals::Models::Team.all.each do |team|
+            begin
+              init_score(team, round)
+            rescue => e
+              @logger.error(e.to_s)
+            end
+          end
+        end
+
         def update_score(flag)
           ::Themis::Finals::Models::DB.transaction(
           ) do
@@ -52,9 +62,30 @@ module Themis
           end
         end
 
+        def get_team_scores(team)
+          round = ::Themis::Finals::Models::Round.latest_ready
+          if round.nil?
+            return []
+          end
+
+          ::Themis::Finals::Models::Score.filter_by_team_round(team, round)
+        end
+
         private
         def score_table_name
           ::Themis::Finals::Models::Score.table_name
+        end
+
+        def init_score(team, round)
+          ::Themis::Finals::Models::DB.transaction do
+            ::Themis::Finals::Models::Score.create(
+              attack_points: 0.0,
+              availability_points: 0.0,
+              defence_points: 0.0,
+              team_id: team.id,
+              round_id: round.id
+            )
+          end
         end
 
         def charge_availability(flag, polls)

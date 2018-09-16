@@ -287,6 +287,7 @@ module Themis
 
         def recalculate_round(round)
           ::Themis::Finals::Models::DB.transaction do
+            @score_ctrl.init_scores(round)
             rel_flags = ::Themis::Finals::Models::Flag.relevant(round)
             err_update = false
             rel_flags.each do |flag|

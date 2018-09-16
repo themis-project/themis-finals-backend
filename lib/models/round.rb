@@ -10,6 +10,10 @@ module Themis
           def current
             where(finished_at: nil).order(:id)
           end
+
+          def latest_ready
+            exclude(finished_at: nil).order(::Sequel.desc(:finished_at)).first
+          end
         end
       end
     end
