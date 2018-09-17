@@ -22,7 +22,6 @@ module Themis
           def filter_by_team_round(team, round)
             where(team_id: team.id)
             .where { round_id <= round.id }
-            .order(::Sequel.desc(:round_id))
           end
         end
       end

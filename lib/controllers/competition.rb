@@ -308,6 +308,7 @@ module Themis
             round_num = round.id
 
             @service_ctrl.ensure_disable(round)
+            @score_ctrl.notify_team_scores(round)
 
             ::Themis::Finals::Models::DB.after_commit do
               @logger.info("Round #{round_num} finished!")

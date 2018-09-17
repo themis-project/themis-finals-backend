@@ -4,6 +4,7 @@ require './lib/constants/flag_poll_state'
 require './lib/utils/logger'
 require './lib/controllers/attack'
 require './lib/controllers/service'
+require './lib/utils/event_emitter'
 
 module Themis
   module Finals
@@ -58,6 +59,23 @@ module Themis
               update_total_score(team)
             rescue => e
               @logger.error(e.to_s)
+            end
+          end
+        end
+
+        def notify_team_scores(round)
+          ::Themis::Finals::Models::DB.transaction do
+            ::Themis::Finals::Models::Score.where(round_id: round.id).each do |score|
+              data = score.serialize
+              team_data = {}
+              team_data[score.team_id] = data
+              ::Themis::Finals::Utils::EventEmitter.emit(
+                'team/score',
+                data,
+                nil,
+                nil,
+                team_data
+              )
             end
           end
         end
