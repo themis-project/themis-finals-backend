@@ -23,6 +23,11 @@ module Themis
             where(team_id: team.id)
             .where { round_id <= round.id }
           end
+
+          def filter_by_round_range(start_num, end_num)
+            where { round_id >= start_num }
+            .where { round_id <= end_num }
+          end
         end
       end
     end
