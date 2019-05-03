@@ -459,60 +459,6 @@ module Themis
           json r
         end
 
-        post '/api/submit' do
-          unless request.content_type == 'application/json'
-            halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
-          end
-
-          team = @identity_ctrl.get_team(@remote_ip)
-
-          if team.nil?
-            halt 400, json(
-              ::Themis::Finals::Attack::Result::ERR_INVALID_IDENTITY
-            )
-          end
-
-          payload = nil
-
-          begin
-            request.body.rewind
-            payload = ::JSON.parse request.body.read
-          rescue => e
-            halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
-          end
-
-          unless payload.respond_to? 'map'
-            halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
-          end
-
-          stage = @competition_stage_ctrl.current
-          if stage.not_started? || stage.starting?
-            halt 400, json(
-              ::Themis::Finals::Attack::Result::ERR_CONTEST_NOT_STARTED
-            )
-          end
-
-          if stage.paused?
-            halt 400, json(::Themis::Finals::Attack::Result::ERR_CONTEST_PAUSED)
-          end
-
-          if stage.finished?
-            halt 400, json(
-              ::Themis::Finals::Attack::Result::ERR_CONTEST_COMPLETED
-            )
-          end
-
-          r = payload.map do |flag|
-            @attack_ctrl.handle_deprecated(team, flag)
-          end
-
-          if r.count == 0
-            halt 400, json(::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT)
-          end
-
-          json r
-        end
-
         post '/api/checker/v2/report_push' do
           unless request.content_type == 'application/json'
             halt 400

@@ -1,7 +1,6 @@
 require 'date'
 require './lib/domain/network'
 require './lib/domain/settings'
-require './lib/domain/deprecated_settings'
 
 module Themis
   module Finals
@@ -11,14 +10,12 @@ module Themis
           @data = nil
           @network = nil
           @settings = nil
-          @deprecated_settings = nil
         end
 
         def init
           ::Themis::Finals::Models::DB.transaction do
             network = ::Themis::Finals::Domain.get_network
             settings = ::Themis::Finals::Domain.get_settings
-            deprecated_settings = ::Themis::Finals::Domain.get_deprecated_settings
             data = {
               network: {
                 internal: network.internal.map { |x| x.to_s }
@@ -28,10 +25,6 @@ module Themis
                 round_timespan: settings.round_timespan,
                 poll_timespan: settings.poll_timespan,
                 poll_delay: settings.poll_delay
-              },
-              deprecated_settings: {
-                attack_limit_period: deprecated_settings.attack_limit_period,
-                attack_limit_attempts: deprecated_settings.attack_limit_attempts
               }
             }
 
@@ -95,21 +88,6 @@ module Themis
           end
 
           @settings
-        end
-
-        def deprecated_settings
-          raise "Configuration unavailable!" if @data.nil?
-
-          if @deprecated_settings.nil?
-            dsl = ::Themis::Finals::Domain::DeprecatedSettingsDSL.new
-            dsl.attack_limits(
-              @data['settings']['attack_limit_attempts'],
-              @data['settings']['attack_limit_period']
-            )
-            @deprecated_settings = dsl.deprecated_settings
-          end
-
-          @deprecated_settings
         end
       end
     end

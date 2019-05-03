@@ -31,38 +31,6 @@ module Themis
           internal_process(cutoff, attempt, team, data)
         end
 
-        def handle_deprecated(team, data)
-          cutoff = ::DateTime.now
-          attempt = ::Themis::Finals::Models::AttackAttempt.create(
-            occured_at: cutoff,
-            request: data.to_s,
-            response: ::Themis::Finals::Attack::Result::ERR_GENERIC,
-            team_id: team.id,
-            deprecated_api: true
-          )
-
-          unless @domain_ctrl.available?
-            attempt.save
-            return ::Themis::Finals::Attack::Result::ERR_GENERIC
-          end
-
-          threshold = (cutoff.to_time - @domain_ctrl.deprecated_settings.attack_limit_period).to_datetime
-
-          attempt_count = ::Themis::Finals::Models::AttackAttempt
-          .where(team: team, deprecated_api: true)
-          .where { occured_at >= threshold }
-          .count
-
-          if attempt_count > @domain_ctrl.deprecated_settings.attack_limit_attempts
-            r = ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT
-            attempt.response = r
-            attempt.save
-            return r
-          end
-
-          internal_process(cutoff, attempt, team, data)
-        end
-
         private
         def internal_process(cutoff, attempt, team, data)
           old_code = attempt.deprecated_api
