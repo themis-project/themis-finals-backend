@@ -1,7 +1,5 @@
 require 'date'
 
-require 'themis/finals/attack/result'
-
 require './lib/controllers/round'
 require './lib/controllers/team_service_state'
 require './lib/utils/event_emitter'
@@ -24,8 +22,7 @@ module Themis
             occured_at: cutoff,
             request: data.to_s,
             response: ::Themis::Finals::Constants::SubmitResult::ERROR_UNKNOWN,
-            team_id: team.id,
-            deprecated_api: false
+            team_id: team.id
           )
 
           internal_process(cutoff, attempt, team, data)
@@ -33,14 +30,8 @@ module Themis
 
         private
         def internal_process(cutoff, attempt, team, data)
-          old_code = attempt.deprecated_api
-
           unless data.respond_to?('match')
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
             attempt.response = r
             attempt.save
             return r
@@ -48,11 +39,7 @@ module Themis
 
           match_ = data.match(/^[\da-f]{32}=$/)
           if match_.nil?
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
             attempt.response = r
             attempt.save
             return r
@@ -61,44 +48,28 @@ module Themis
           flag = ::Themis::Finals::Models::Flag.first_match(match_[0])
 
           if flag.nil?
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_FLAG_NOT_FOUND
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_NOT_FOUND
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_NOT_FOUND
             attempt.response = r
             attempt.save
             return r
           end
 
           if flag.team_id == team.id
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_FLAG_YOURS
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_YOUR_OWN
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_YOUR_OWN
             attempt.response = r
             attempt.save
             return r
           end
 
           unless @team_service_state_ctrl.up?(team, flag.service)
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID
             attempt.response = r
             attempt.save
             return r
           end
 
           if flag.expired_at < cutoff
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_FLAG_EXPIRED
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_EXPIRED
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_EXPIRED
             attempt.response = r
             attempt.save
             return r
@@ -131,11 +102,7 @@ module Themis
 
               end
 
-              r = if old_code
-                ::Themis::Finals::Attack::Result::SUCCESS_FLAG_ACCEPTED
-              else
-                ::Themis::Finals::Constants::SubmitResult::SUCCESS
-              end
+              r = ::Themis::Finals::Constants::SubmitResult::SUCCESS
 
               ::Themis::Finals::Utils::EventEmitter.emit_log(
                 4,
@@ -145,11 +112,7 @@ module Themis
               )
             end
           rescue ::Sequel::UniqueConstraintViolation => e
-            r = if old_code
-              ::Themis::Finals::Attack::Result::ERR_FLAG_SUBMITTED
-            else
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_SUBMITTED
-            end
+            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_SUBMITTED
           end
 
           attempt.response = r

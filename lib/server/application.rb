@@ -6,7 +6,6 @@ require 'date'
 require 'tempfile'
 require 'mini_magick'
 
-require 'themis/finals/attack/result'
 require './lib/controllers/attack'
 require './lib/utils/event_emitter'
 require './lib/utils/tempfile_monkey_patch'
@@ -14,6 +13,7 @@ require './lib/server/rack_monkey_patch'
 require './lib/models/bootstrap'
 require './lib/controllers/ctftime'
 require './lib/constants/submit_result'
+require './lib/constants/service_status'
 
 require './lib/controllers/identity'
 require './lib/controllers/competition'
@@ -21,6 +21,7 @@ require './lib/controllers/competition_stage'
 require './lib/controllers/scoreboard'
 require './lib/controllers/image'
 require './lib/controllers/score'
+require './lib/controllers/team_service_state'
 
 module Themis
   module Finals
@@ -37,6 +38,7 @@ module Themis
           @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
           @image_ctrl = ::Themis::Finals::Controllers::Image.new
           @score_ctrl = ::Themis::Finals::Controllers::Score.new
+          @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
 
           ::MiniMagick.configure do |config|
             config.cli = :graphicsmagick
@@ -387,6 +389,35 @@ module Themis
           end
 
           send_file filename
+        end
+
+        get '/api/service/v1/list' do
+          json ::Themis::Finals::Models::Service.enabled.map { |service|
+            {
+              id: service.id,
+              name: service.name
+            }
+          }
+        end
+
+        get %r{^/api/service/v1/status/(\d{1,2})$} do |service_id_str|
+          content_type :text
+
+          team = @identity_ctrl.get_team(@remote_ip)
+          if team.nil?
+            halt 403
+          end
+
+          service_id = service_id_str.to_i
+          service = ::Themis::Finals::Models::Service[service_id]
+          halt 404 if service.nil? || !service.enabled
+
+          r = if @team_service_state_ctrl.up?(team, service)
+            ::Themis::Finals::Constants::ServiceStatus::UP
+          else
+            ::Themis::Finals::Constants::ServiceStatus::NOT_UP
+          end
+          ::Themis::Finals::Constants::ServiceStatus.key(r).to_s
         end
 
         get '/api/capsule/v1/public_key' do

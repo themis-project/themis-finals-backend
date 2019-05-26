@@ -5,7 +5,6 @@
       DateTime :occured_at, null: false
       String :request, size: 1024, null: false
       Integer :response, null: false
-      TrueClass :deprecated_api, null: false
       foreign_key :team_id, :teams, index: true, null: false
     end
   end

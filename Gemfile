@@ -21,4 +21,3 @@ gem 'activesupport'
 gem 'mini_magick'
 
 gem 'themis-finals-checker-result', '~> 1.0.0'
-gem 'themis-finals-attack-result', '~> 1.0.0'
