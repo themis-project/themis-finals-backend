@@ -412,7 +412,8 @@ module Themis
           service = ::Themis::Finals::Models::Service[service_id]
           halt 404 if service.nil? || !service.enabled
 
-          r = if @team_service_state_ctrl.up?(team, service)
+          stage = @competition_stage_ctrl.current
+          r = if @team_service_state_ctrl.up?(stage, team, service)
             ::Themis::Finals::Constants::ServiceStatus::UP
           else
             ::Themis::Finals::Constants::ServiceStatus::NOT_UP
@@ -465,7 +466,7 @@ module Themis
               ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
           end
 
-          r = @attack_ctrl.handle(team, flag_str)
+          r = @attack_ctrl.handle(stage, team, flag_str)
           ::Themis::Finals::Constants::SubmitResult.key(r).to_s
         end
 

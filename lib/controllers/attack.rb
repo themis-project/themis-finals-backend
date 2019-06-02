@@ -16,7 +16,7 @@ module Themis
           @round_ctrl = ::Themis::Finals::Controllers::Round.new
         end
 
-        def handle(team, data)
+        def handle(stage, team, data)
           cutoff = ::DateTime.now
           attempt = ::Themis::Finals::Models::AttackAttempt.create(
             occured_at: cutoff,
@@ -25,11 +25,6 @@ module Themis
             team_id: team.id
           )
 
-          internal_process(cutoff, attempt, team, data)
-        end
-
-        private
-        def internal_process(cutoff, attempt, team, data)
           unless data.respond_to?('match')
             r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
             attempt.response = r
@@ -61,7 +56,7 @@ module Themis
             return r
           end
 
-          unless @team_service_state_ctrl.up?(team, flag.service)
+          unless @team_service_state_ctrl.up?(stage, team, flag.service)
             r = ::Themis::Finals::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID
             attempt.response = r
             attempt.save

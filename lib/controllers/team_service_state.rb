@@ -9,18 +9,26 @@ module Themis
   module Finals
     module Controllers
       class TeamServiceState
-        def up?(team, service)
-          push = ::Themis::Finals::Models::TeamServicePushState.first(
-            team_id: team.id,
-            service_id: service.id
-          )
-          push_ok = !push.nil? && push.state == ::Themis::Finals::Constants::TeamServiceState::UP
+        def up?(stage, team, service)
+          if stage.any?(:not_started, :starting, :paused, :finished)
+            return false
+          end
 
           pull = ::Themis::Finals::Models::TeamServicePullState.first(
             team_id: team.id,
             service_id: service.id
           )
           pull_ok = !pull.nil? && pull.state == ::Themis::Finals::Constants::TeamServiceState::UP
+
+          if stage.any?(:pausing, :finishing)
+            return pull_ok
+          end
+
+          push = ::Themis::Finals::Models::TeamServicePushState.first(
+            team_id: team.id,
+            service_id: service.id
+          )
+          push_ok = !push.nil? && push.state == ::Themis::Finals::Constants::TeamServiceState::UP
 
           push_ok && pull_ok
         end
