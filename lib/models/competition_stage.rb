@@ -1,36 +1,36 @@
 require 'sequel'
 require './lib/constants/competition_stage'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Models
       class CompetitionStage < ::Sequel::Model
         def not_started?
-          stage == ::Themis::Finals::Const::CompetitionStage::NOT_STARTED
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::NOT_STARTED
         end
 
         def starting?
-          stage == ::Themis::Finals::Const::CompetitionStage::STARTING
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::STARTING
         end
 
         def started?
-          stage == ::Themis::Finals::Const::CompetitionStage::STARTED
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::STARTED
         end
 
         def pausing?
-          stage == ::Themis::Finals::Const::CompetitionStage::PAUSING
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::PAUSING
         end
 
         def paused?
-          stage == ::Themis::Finals::Const::CompetitionStage::PAUSED
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::PAUSED
         end
 
         def finishing?
-          stage == ::Themis::Finals::Const::CompetitionStage::FINISHING
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::FINISHING
         end
 
         def finished?
-          stage == ::Themis::Finals::Const::CompetitionStage::FINISHED
+          stage == ::VolgaCTF::Final::Const::CompetitionStage::FINISHED
         end
 
         def any?(*stages)

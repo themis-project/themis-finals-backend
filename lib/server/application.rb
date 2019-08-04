@@ -23,22 +23,22 @@ require './lib/controllers/image'
 require './lib/controllers/score'
 require './lib/controllers/team_service_state'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Server
       class Application < ::Sinatra::Base
         def initialize(app = nil)
           super(app)
 
-          @identity_ctrl = ::Themis::Finals::Controllers::Identity.new
-          @ctftime_ctrl = ::Themis::Finals::Controllers::CTFTime.new
-          @competition_stage_ctrl = ::Themis::Finals::Controllers::CompetitionStage.new
-          @competition_ctrl = ::Themis::Finals::Controllers::Competition.new
-          @attack_ctrl = ::Themis::Finals::Controllers::Attack.new
-          @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
-          @image_ctrl = ::Themis::Finals::Controllers::Image.new
-          @score_ctrl = ::Themis::Finals::Controllers::Score.new
-          @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
+          @identity_ctrl = ::VolgaCTF::Final::Controllers::Identity.new
+          @ctftime_ctrl = ::VolgaCTF::Final::Controllers::CTFTime.new
+          @competition_stage_ctrl = ::VolgaCTF::Final::Controllers::CompetitionStage.new
+          @competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+          @attack_ctrl = ::VolgaCTF::Final::Controllers::Attack.new
+          @scoreboard_ctrl = ::VolgaCTF::Final::Controllers::Scoreboard.new
+          @image_ctrl = ::VolgaCTF::Final::Controllers::Image.new
+          @score_ctrl = ::VolgaCTF::Final::Controllers::Score.new
+          @team_service_state_ctrl = ::VolgaCTF::Final::Controllers::TeamServiceState.new
 
           ::MiniMagick.configure do |config|
             config.cli = :graphicsmagick
@@ -46,7 +46,7 @@ module Themis
         end
 
         configure do
-          ::Themis::Finals::Models.init
+          ::VolgaCTF::Final::Models.init
         end
 
         configure :production, :development do
@@ -79,7 +79,7 @@ module Themis
         end
 
         get '/api/competition/round' do
-          round = ::Themis::Finals::Models::Round.count
+          round = ::VolgaCTF::Final::Models::Round.count
           json(value: (round == 0) ? nil : round)
         end
 
@@ -96,9 +96,9 @@ module Themis
             end
 
           if muted
-            obj = ::Themis::Finals::Models::ScoreboardHistoryPosition.last
+            obj = ::VolgaCTF::Final::Models::ScoreboardHistoryPosition.last
           else
-            obj = ::Themis::Finals::Models::ScoreboardPosition.last
+            obj = ::VolgaCTF::Final::Models::ScoreboardPosition.last
           end
 
           json(
@@ -116,9 +116,9 @@ module Themis
             end
 
           if muted
-            obj = ::Themis::Finals::Models::ScoreboardHistoryPosition.last
+            obj = ::VolgaCTF::Final::Models::ScoreboardHistoryPosition.last
           else
-            obj = ::Themis::Finals::Models::ScoreboardPosition.last
+            obj = ::VolgaCTF::Final::Models::ScoreboardPosition.last
           end
 
           json(
@@ -127,15 +127,15 @@ module Themis
         end
 
         get '/api/teams' do
-          json ::Themis::Finals::Models::Team.map { |t| t.serialize }
+          json ::VolgaCTF::Final::Models::Team.map { |t| t.serialize }
         end
 
         get '/api/services' do
-          json ::Themis::Finals::Models::Service.enabled.map { |s| s.serialize }
+          json ::VolgaCTF::Final::Models::Service.enabled.map { |s| s.serialize }
         end
 
         get '/api/posts' do
-          json ::Themis::Finals::Models::Post.map { |post|
+          json ::VolgaCTF::Final::Models::Post.map { |post|
             {
               id: post.id,
               title: post.title,
@@ -169,15 +169,15 @@ module Themis
           end
 
           begin
-            ::Themis::Finals::Models::DB.transaction do
-              post = ::Themis::Finals::Models::Post.create(
+            ::VolgaCTF::Final::Models::DB.transaction do
+              post = ::VolgaCTF::Final::Models::Post.create(
                 title: payload['title'],
                 description: payload['description'],
                 created_at: ::DateTime.now,
                 updated_at: ::DateTime.now
               )
 
-              ::Themis::Finals::Utils::EventEmitter.broadcast(
+              ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
                 'posts/add',
                 id: post.id,
                 title: post.title,
@@ -200,13 +200,13 @@ module Themis
           end
 
           post_id = post_id_str.to_i
-          post = ::Themis::Finals::Models::Post[post_id]
+          post = ::VolgaCTF::Final::Models::Post[post_id]
           halt 404 if post.nil?
 
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             post.destroy
 
-            ::Themis::Finals::Utils::EventEmitter.broadcast(
+            ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
               'posts/remove',
               id: post_id
             )
@@ -239,17 +239,17 @@ module Themis
           end
 
           post_id = post_id_str.to_i
-          post = ::Themis::Finals::Models::Post[post_id]
+          post = ::VolgaCTF::Final::Models::Post[post_id]
           halt 404 if post.nil?
 
           begin
-            ::Themis::Finals::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::DB.transaction do
               post.title = payload['title']
               post.description = payload['description']
               post.updated_at = ::DateTime.now
               post.save
 
-              ::Themis::Finals::Utils::EventEmitter.broadcast(
+              ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
                 'posts/edit',
                 id: post.id,
                 title: post.title,
@@ -280,7 +280,7 @@ module Themis
           path = nil
           upload = params[:file][:tempfile]
           extension = ::File.extname(params[:file][:filename])
-          t = Tempfile.open(['logo', extension], ::ENV['THEMIS_FINALS_UPLOAD_DIR']) do |f|
+          t = Tempfile.open(['logo', extension], ::ENV['VOLGACTF_FINAL_UPLOAD_DIR']) do |f|
             f.write(upload.read)
             path = f.path
             f.persist  # introduced by a monkey patch
@@ -306,7 +306,7 @@ module Themis
           end
 
           team_id = team_id_str.to_i
-          team = ::Themis::Finals::Models::Team[team_id]
+          team = ::VolgaCTF::Final::Models::Team[team_id]
           halt 404 if team.nil?
 
           json @score_ctrl.get_team_scores(team).map { |s| s.serialize }
@@ -338,7 +338,7 @@ module Themis
             identity = { name: 'external' }
           end
 
-          json ::Themis::Finals::Models::TeamServicePushState.map { |team_service_state|
+          json ::VolgaCTF::Final::Models::TeamServicePushState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,
@@ -366,7 +366,7 @@ module Themis
             identity = { name: 'external' }
           end
 
-          json ::Themis::Finals::Models::TeamServicePullState.map { |team_service_state|
+          json ::VolgaCTF::Final::Models::TeamServicePullState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,
@@ -380,10 +380,10 @@ module Themis
 
         get %r{^/api/team/logo/(\d{1,2})\.png$} do |team_id_str|
           team_id = team_id_str.to_i
-          team = ::Themis::Finals::Models::Team[team_id]
+          team = ::VolgaCTF::Final::Models::Team[team_id]
           halt 404 if team.nil?
 
-          filename = ::File.join(::ENV['THEMIS_FINALS_TEAM_LOGO_DIR'], "#{team.alias}.png")
+          filename = ::File.join(::ENV['VOLGACTF_FINAL_TEAM_LOGO_DIR'], "#{team.alias}.png")
           unless ::File.exist?(filename)
             filename = ::File.join(::Dir.pwd, 'logo', 'default.png')
           end
@@ -392,7 +392,7 @@ module Themis
         end
 
         get '/api/service/v1/list' do
-          json ::Themis::Finals::Models::Service.enabled.map { |service|
+          json ::VolgaCTF::Final::Models::Service.enabled.map { |service|
             {
               id: service.id,
               name: service.name
@@ -409,35 +409,35 @@ module Themis
           end
 
           service_id = service_id_str.to_i
-          service = ::Themis::Finals::Models::Service[service_id]
+          service = ::VolgaCTF::Final::Models::Service[service_id]
           halt 404 if service.nil? || !service.enabled
 
           stage = @competition_stage_ctrl.current
           r = if @team_service_state_ctrl.up?(stage, team, service)
-            ::Themis::Finals::Constants::ServiceStatus::UP
+            ::VolgaCTF::Final::Constants::ServiceStatus::UP
           else
-            ::Themis::Finals::Constants::ServiceStatus::NOT_UP
+            ::VolgaCTF::Final::Constants::ServiceStatus::NOT_UP
           end
-          ::Themis::Finals::Constants::ServiceStatus.key(r).to_s
+          ::VolgaCTF::Final::Constants::ServiceStatus.key(r).to_s
         end
 
         get '/api/capsule/v1/public_key' do
           content_type :text
-          ::ENV.fetch('THEMIS_FINALS_FLAG_SIGN_KEY_PUBLIC', '').gsub('\n', "\n")
+          ::ENV.fetch('VOLGACTF_FINAL_FLAG_SIGN_KEY_PUBLIC', '').gsub('\n', "\n")
         end
 
         post '/api/flag/v1/submit' do
           content_type :text
           unless request.content_type == 'text/plain'
-            halt 400, ::Themis::Finals::Constants::SubmitResult.key(
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
+            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
+              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
           team = @identity_ctrl.get_team(@remote_ip)
 
           if team.nil?
-            halt 400, ::Themis::Finals::Constants::SubmitResult.key(
-              ::Themis::Finals::Constants::SubmitResult::ERROR_ACCESS_DENIED).to_s
+            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
+              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_ACCESS_DENIED).to_s
           end
 
           payload = nil
@@ -446,32 +446,32 @@ module Themis
             request.body.rewind
             flag_str = request.body.read
           rescue => e
-            halt 400, ::Themis::Finals::Constants::SubmitResult.key(
-              ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
+            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
+              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
           stage = @competition_stage_ctrl.current
           if stage.not_started? || stage.starting?
-            halt 400, ::Themis::Finals::Constants::SubmitResult.key(
-              ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_NOT_STARTED).to_s
+            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
+              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_COMPETITION_NOT_STARTED).to_s
           end
 
           if stage.paused?
-            halt 400, ::Themis::Finals::Constants::SubmitResult.key(
-              ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_PAUSED).to_s
+            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
+              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_COMPETITION_PAUSED).to_s
           end
 
           if stage.finished?
-            halt 400, ::Themis::Finals::Constants::SubmitResult.key(
-              ::Themis::Finals::Constants::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
+            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
+              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
           end
 
           r = @attack_ctrl.handle(stage, team, flag_str)
-          ::Themis::Finals::Constants::SubmitResult.key(r).to_s
+          ::VolgaCTF::Final::Constants::SubmitResult.key(r).to_s
         end
 
         get %r{^/api/flag/v1/info/([\da-f]{32}=)$} do |flag_str|
-          flag_obj = ::Themis::Finals::Models::Flag.exclude(
+          flag_obj = ::VolgaCTF::Final::Models::Flag.exclude(
             pushed_at: nil
           ).where(
             flag: flag_str
@@ -506,7 +506,7 @@ module Themis
           end
 
           begin
-            flag = ::Themis::Finals::Models::Flag.first(
+            flag = ::VolgaCTF::Final::Models::Flag.first(
               flag: payload['flag']
             )
             if flag.nil?
@@ -542,7 +542,7 @@ module Themis
           end
 
           begin
-            poll = ::Themis::Finals::Models::FlagPoll.first(
+            poll = ::VolgaCTF::Final::Models::FlagPoll.first(
               id: payload['request_id']
             )
             if poll.nil?

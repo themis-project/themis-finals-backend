@@ -8,13 +8,13 @@ require 'jwt'
 
 require './lib/utils/logger'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Flag
         def initialize
-          @logger = ::Themis::Finals::Utils::Logger.get
-          @key = ::OpenSSL::PKey.read(::ENV['THEMIS_FINALS_FLAG_SIGN_KEY_PRIVATE'].gsub('\n', "\n"))
+          @logger = ::VolgaCTF::Final::Utils::Logger.get
+          @key = ::OpenSSL::PKey.read(::ENV['VOLGACTF_FINAL_FLAG_SIGN_KEY_PRIVATE'].gsub('\n', "\n"))
           @alg = 'none'
           if @key.class == ::OpenSSL::PKey::RSA
             @alg = 'RS256'
@@ -22,20 +22,20 @@ module Themis
             @alg = 'ES256'
           end
 
-          @prefix = ::ENV['THEMIS_FINALS_FLAG_WRAP_PREFIX']
-          @suffix = ::ENV['THEMIS_FINALS_FLAG_WRAP_SUFFIX']
+          @prefix = ::ENV['VOLGACTF_FINAL_FLAG_WRAP_PREFIX']
+          @suffix = ::ENV['VOLGACTF_FINAL_FLAG_WRAP_SUFFIX']
           @generator_secret = ::Base64.urlsafe_decode64(
-            ::ENV['THEMIS_FINALS_FLAG_GENERATOR_SECRET']
+            ::ENV['VOLGACTF_FINAL_FLAG_GENERATOR_SECRET']
           )
         end
 
         def issue(team, service, round)
           model = nil
 
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
               flag, label = generate_flag_label
               created = ::DateTime.now
-              model = ::Themis::Finals::Models::Flag.create(
+              model = ::VolgaCTF::Final::Models::Flag.create(
                 flag: flag,
                 created_at: created,
                 pushed_at: nil,

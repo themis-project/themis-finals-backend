@@ -1,7 +1,7 @@
 require 'ruby-enum'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Constants
       class SubmitResult
         include ::Ruby::Enum

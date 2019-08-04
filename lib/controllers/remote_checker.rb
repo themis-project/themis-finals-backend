@@ -1,8 +1,8 @@
 require 'uri'
 require 'net/http'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class RemoteChecker
         def push(endpoint, data)
@@ -21,8 +21,8 @@ module Themis
           req.body = data
           req.content_type = 'application/json'
           req.basic_auth(
-            ::ENV['THEMIS_FINALS_AUTH_CHECKER_USERNAME'],
-            ::ENV['THEMIS_FINALS_AUTH_CHECKER_PASSWORD']
+            ::ENV['VOLGACTF_FINAL_AUTH_CHECKER_USERNAME'],
+            ::ENV['VOLGACTF_FINAL_AUTH_CHECKER_PASSWORD']
           )
 
           res = ::Net::HTTP.start(uri.hostname, uri.port) do |http|

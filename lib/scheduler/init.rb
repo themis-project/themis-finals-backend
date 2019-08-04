@@ -3,11 +3,11 @@ require 'eventmachine'
 require './lib/utils/logger'
 require './lib/queue/tasks'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     class Scheduler
       def initialize
-        @logger = ::Themis::Finals::Utils::Logger.get
+        @logger = ::VolgaCTF::Final::Utils::Logger.get
       end
 
       def run
@@ -15,7 +15,7 @@ module Themis
           @logger.info('Scheduler started, CTRL+C to stop')
 
           ::EM.add_periodic_timer 5 do
-            ::Themis::Finals::Queue::Tasks::Planner.perform_async
+            ::VolgaCTF::Final::Queue::Tasks::Planner.perform_async
           end
 
           ::Signal.trap 'INT' do

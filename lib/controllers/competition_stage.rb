@@ -2,15 +2,15 @@ require './lib/utils/event_emitter'
 require './lib/constants/competition_stage'
 require 'json'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class CompetitionStage
         def current
-          val = ::Themis::Finals::Models::CompetitionStage.last
+          val = ::VolgaCTF::Final::Models::CompetitionStage.last
           if val.nil?
-            val = ::Themis::Finals::Models::CompetitionStage.new(
-              stage: ::Themis::Finals::Const::CompetitionStage::NOT_STARTED,
+            val = ::VolgaCTF::Final::Models::CompetitionStage.new(
+              stage: ::VolgaCTF::Final::Const::CompetitionStage::NOT_STARTED,
               created_at: ::DateTime.now
             )
           end
@@ -19,46 +19,46 @@ module Themis
         end
 
         def init
-          change_stage(::Themis::Finals::Const::CompetitionStage::NOT_STARTED)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::NOT_STARTED)
         end
 
         def enqueue_start
-          change_stage(::Themis::Finals::Const::CompetitionStage::STARTING)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::STARTING)
         end
 
         def start
-          change_stage(::Themis::Finals::Const::CompetitionStage::STARTED)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::STARTED)
         end
 
         def enqueue_pause
-          change_stage(::Themis::Finals::Const::CompetitionStage::PAUSING)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::PAUSING)
         end
 
         def pause
-          change_stage(::Themis::Finals::Const::CompetitionStage::PAUSED)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::PAUSED)
         end
 
         def enqueue_finish
-          change_stage(::Themis::Finals::Const::CompetitionStage::FINISHING)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::FINISHING)
         end
 
         def finish
-          change_stage(::Themis::Finals::Const::CompetitionStage::FINISHED)
+          change_stage(::VolgaCTF::Final::Const::CompetitionStage::FINISHED)
         end
 
         private
         def change_stage(stage)
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::CompetitionStage.create(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::CompetitionStage.create(
               stage: stage,
               created_at: ::DateTime.now
             )
 
-            ::Themis::Finals::Utils::EventEmitter.broadcast(
+            ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
               'competition/stage',
               value: stage
             )
-            ::Themis::Finals::Utils::EventEmitter.emit_log(1, value: stage)
+            ::VolgaCTF::Final::Utils::EventEmitter.emit_log(1, value: stage)
           end
         end
       end

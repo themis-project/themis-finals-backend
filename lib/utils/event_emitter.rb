@@ -3,15 +3,15 @@ require 'json'
 require './lib/utils/publisher'
 require './lib/utils/logger'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Utils
       module EventEmitter
-        @logger = ::Themis::Finals::Utils::Logger.get
+        @logger = ::VolgaCTF::Final::Utils::Logger.get
 
         def self.emit(name, internal_data, teams_data, external_data, team_data={})
           event = nil
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             data = {
               internal: internal_data,
               teams: teams_data,
@@ -19,15 +19,15 @@ module Themis
               external: external_data,
             }
 
-            event = ::Themis::Finals::Models::ServerSentEvent.create(
+            event = ::VolgaCTF::Final::Models::ServerSentEvent.create(
               name: name,
               data: data,
               created: DateTime.now
             )
 
-            ::Themis::Finals::Models::DB.after_commit do
+            ::VolgaCTF::Final::Models::DB.after_commit do
               begin
-                publisher = ::Themis::Finals::Utils::Publisher.new
+                publisher = ::VolgaCTF::Final::Utils::Publisher.new
                 event_data = {
                   id: event.id,
                   name: name,
@@ -36,7 +36,7 @@ module Themis
                 }.to_json
 
                 publisher.publish(
-                  "#{::ENV['THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE']}:events",
+                  "#{::ENV['VOLGACTF_FINAL_STREAM_REDIS_CHANNEL_NAMESPACE']}:events",
                   event_data
                 )
               rescue => e

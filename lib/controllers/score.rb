@@ -6,17 +6,17 @@ require './lib/controllers/attack'
 require './lib/controllers/service'
 require './lib/utils/event_emitter'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Score
         def initialize
-          @logger = ::Themis::Finals::Utils::Logger.get
-          @service_ctrl = ::Themis::Finals::Controllers::Service.new
+          @logger = ::VolgaCTF::Final::Utils::Logger.get
+          @service_ctrl = ::VolgaCTF::Final::Controllers::Service.new
         end
 
         def init_scores(round)
-          ::Themis::Finals::Models::Team.all.each do |team|
+          ::VolgaCTF::Final::Models::Team.all.each do |team|
             begin
               init_score(team, round)
             rescue => e
@@ -26,9 +26,9 @@ module Themis
         end
 
         def update_score(flag)
-          ::Themis::Finals::Models::DB.transaction(
+          ::VolgaCTF::Final::Models::DB.transaction(
           ) do
-            polls = ::Themis::Finals::Models::FlagPoll.relevant(flag).all
+            polls = ::VolgaCTF::Final::Models::FlagPoll.relevant(flag).all
             charge_availability(flag, polls)
 
             attacks = flag.attacks
@@ -54,7 +54,7 @@ module Themis
         end
 
         def update_total_scores
-          ::Themis::Finals::Models::Team.all.each do |team|
+          ::VolgaCTF::Final::Models::Team.all.each do |team|
             begin
               update_total_score(team)
             rescue => e
@@ -64,12 +64,12 @@ module Themis
         end
 
         def notify_team_scores(round)
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::Score.where(round_id: round.id).each do |score|
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::Score.where(round_id: round.id).each do |score|
               data = score.serialize
               team_data = {}
               team_data[score.team_id] = data
-              ::Themis::Finals::Utils::EventEmitter.emit(
+              ::VolgaCTF::Final::Utils::EventEmitter.emit(
                 'team/score',
                 data,
                 nil,
@@ -81,22 +81,22 @@ module Themis
         end
 
         def get_team_scores(team)
-          round = ::Themis::Finals::Models::Round.latest_ready
+          round = ::VolgaCTF::Final::Models::Round.latest_ready
           if round.nil?
             return []
           end
 
-          ::Themis::Finals::Models::Score.filter_by_team_round(team, round)
+          ::VolgaCTF::Final::Models::Score.filter_by_team_round(team, round)
         end
 
         private
         def score_table_name
-          ::Themis::Finals::Models::Score.table_name
+          ::VolgaCTF::Final::Models::Score.table_name
         end
 
         def init_score(team, round)
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::Score.create(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::Score.create(
               attack_points: 0.0,
               availability_points: 0.0,
               defence_points: 0.0,
@@ -107,12 +107,12 @@ module Themis
         end
 
         def charge_availability(flag, polls)
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             success_count = polls.count { |p| p.success? }
             return if success_count == 0
             pts = Float(success_count) / Float(polls.count)
 
-            ::Themis::Finals::Models::Score.dataset.returning.insert_conflict(
+            ::VolgaCTF::Final::Models::Score.dataset.returning.insert_conflict(
               constraint: :score_team_round_uniq,
               update: {
                 availability_points: ::Sequel.expr(pts) + ::Sequel[score_table_name][:availability_points]
@@ -128,8 +128,8 @@ module Themis
         end
 
         def charge_defence(flag)
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::Score.dataset.returning.insert_conflict(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::Score.dataset.returning.insert_conflict(
               constraint: :score_team_round_uniq,
               update: {
                 defence_points: ::Sequel.expr(1.0) + ::Sequel[score_table_name][:defence_points]
@@ -145,8 +145,8 @@ module Themis
         end
 
         def charge_attack(flag, attack)
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::Score.dataset.returning.insert_conflict(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::Score.dataset.returning.insert_conflict(
               constraint: :score_team_round_uniq,
               update: {
                 attack_points: ::Sequel.expr(1.0) + ::Sequel[score_table_name][:attack_points]
@@ -162,18 +162,18 @@ module Themis
         end
 
         def update_total_score(team)
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             attack_pts = 0.0
             availability_pts = 0.0
             defence_pts = 0.0
 
-            ::Themis::Finals::Models::Score.where(team_id: team.id).each do |score|
+            ::VolgaCTF::Final::Models::Score.where(team_id: team.id).each do |score|
               attack_pts += score.attack_points
               availability_pts += score.availability_points
               defence_pts += score.defence_points
             end
 
-            ::Themis::Finals::Models::TotalScore.dataset.returning.insert_conflict(
+            ::VolgaCTF::Final::Models::TotalScore.dataset.returning.insert_conflict(
               target: :team_id,
               update: {
                 attack_points: attack_pts,
@@ -187,7 +187,7 @@ module Themis
               team_id: team.id
             )
 
-            ::Themis::Finals::Models::DB.after_commit do
+            ::VolgaCTF::Final::Models::DB.after_commit do
               @logger.info(
                 "Total score of team `#{team.name}` has been recalculated: "\
                 "attack - #{attack_pts} pts, "\

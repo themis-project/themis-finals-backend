@@ -8,10 +8,10 @@ require './lib/controllers/competition'
 require './lib/controllers/image'
 require './lib/utils/logger'
 
-logger = ::Themis::Finals::Utils::Logger.get
+logger = ::VolgaCTF::Final::Utils::Logger.get
 
 config_redis = {
-  url: "redis://#{::ENV['REDIS_HOST']}:#{::ENV['REDIS_PORT']}/#{::ENV['THEMIS_FINALS_QUEUE_REDIS_DB']}"
+  url: "redis://#{::ENV['REDIS_HOST']}:#{::ENV['REDIS_PORT']}/#{::ENV['VOLGACTF_FINAL_QUEUE_REDIS_DB']}"
 }
 
 unless ::ENV.fetch('REDIS_PASSWORD', nil).nil?
@@ -29,7 +29,7 @@ end
 
   config.on(:startup) do
     logger.info "Starting queue process, instance #{::ENV['QUEUE_INSTANCE']}"
-    ::Themis::Finals::Models.init
+    ::VolgaCTF::Final::Models.init
   end
   config.on(:quiet) do
     logger.info 'Got USR1, stopping further job processing...'
@@ -43,8 +43,8 @@ end
   config.redis = config_redis
 end
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Queue
       module Tasks
         class Planner
@@ -52,25 +52,25 @@ module Themis
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
             if competition_ctrl.can_trigger_round?
-              ::Themis::Finals::Queue::Tasks::TriggerRound.perform_async
+              ::VolgaCTF::Final::Queue::Tasks::TriggerRound.perform_async
             end
 
             if competition_ctrl.can_poll?
-              ::Themis::Finals::Queue::Tasks::TriggerPoll.perform_async
+              ::VolgaCTF::Final::Queue::Tasks::TriggerPoll.perform_async
             end
 
             if competition_ctrl.can_recalculate?
-              ::Themis::Finals::Queue::Tasks::TriggerRecalculate.perform_async
+              ::VolgaCTF::Final::Queue::Tasks::TriggerRecalculate.perform_async
             end
 
             if competition_ctrl.can_pause?
-              ::Themis::Finals::Queue::Tasks::TriggerPause.perform_async
+              ::VolgaCTF::Final::Queue::Tasks::TriggerPause.perform_async
             end
 
             if competition_ctrl.can_finish?
-              ::Themis::Finals::Queue::Tasks::TriggerFinish.perform_async
+              ::VolgaCTF::Final::Queue::Tasks::TriggerFinish.perform_async
             end
           end
         end
@@ -80,7 +80,7 @@ module Themis
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
             competition_ctrl.trigger_round
           end
         end
@@ -90,7 +90,7 @@ module Themis
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
             competition_ctrl.trigger_poll
           end
         end
@@ -100,7 +100,7 @@ module Themis
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
             competition_ctrl.trigger_recalculate
           end
         end
@@ -110,7 +110,7 @@ module Themis
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
             competition_ctrl.pause
           end
         end
@@ -120,7 +120,7 @@ module Themis
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
             competition_ctrl.finish
           end
         end
@@ -130,9 +130,9 @@ module Themis
           sidekiq_options :retry => false
 
           def perform(flag_str)
-            flag = ::Themis::Finals::Models::Flag.first(flag: flag_str)
+            flag = ::VolgaCTF::Final::Models::Flag.first(flag: flag_str)
             unless flag.nil?
-              competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+              competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
               competition_ctrl.pull_flag(flag)
             end
           end
@@ -143,9 +143,9 @@ module Themis
           sidekiq_options :retry => false
 
           def perform(path, team_id)
-            team = ::Themis::Finals::Models::Team[team_id]
+            team = ::VolgaCTF::Final::Models::Team[team_id]
             return if team.nil?
-            image_ctrl = ::Themis::Finals::Controllers::Image.new
+            image_ctrl = ::VolgaCTF::Final::Controllers::Image.new
             image_ctrl.resize(path, team)
           end
         end

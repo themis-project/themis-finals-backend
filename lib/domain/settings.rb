@@ -1,5 +1,5 @@
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Domain
       def self.settings(&block)
         settings_dsl = SettingsDSL.new

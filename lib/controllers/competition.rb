@@ -1,7 +1,7 @@
 require 'date'
 
 require 'ip'
-require 'themis/finals/checker/result'
+require 'volgactf/final/checker/result'
 
 require './lib/controllers/competition_stage'
 require './lib/controllers/round'
@@ -18,27 +18,27 @@ require './lib/constants/flag_poll_state'
 require './lib/utils/logger'
 require './lib/controllers/domain'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Competition
         def initialize
-          @logger = ::Themis::Finals::Utils::Logger.get
-          @stage_ctrl = ::Themis::Finals::Controllers::CompetitionStage.new
-          @round_ctrl = ::Themis::Finals::Controllers::Round.new
-          @team_ctrl = ::Themis::Finals::Controllers::Team.new
-          @service_ctrl = ::Themis::Finals::Controllers::Service.new
-          @remote_checker_ctrl = ::Themis::Finals::Controllers::RemoteChecker.new
-          @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
-          @score_ctrl = ::Themis::Finals::Controllers::Score.new
-          @flag_poll_ctrl = ::Themis::Finals::Controllers::FlagPoll.new
-          @flag_ctrl = ::Themis::Finals::Controllers::Flag.new
-          @scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
-          @domain_ctrl = ::Themis::Finals::Controllers::Domain.new
+          @logger = ::VolgaCTF::Final::Utils::Logger.get
+          @stage_ctrl = ::VolgaCTF::Final::Controllers::CompetitionStage.new
+          @round_ctrl = ::VolgaCTF::Final::Controllers::Round.new
+          @team_ctrl = ::VolgaCTF::Final::Controllers::Team.new
+          @service_ctrl = ::VolgaCTF::Final::Controllers::Service.new
+          @remote_checker_ctrl = ::VolgaCTF::Final::Controllers::RemoteChecker.new
+          @team_service_state_ctrl = ::VolgaCTF::Final::Controllers::TeamServiceState.new
+          @score_ctrl = ::VolgaCTF::Final::Controllers::Score.new
+          @flag_poll_ctrl = ::VolgaCTF::Final::Controllers::FlagPoll.new
+          @flag_ctrl = ::VolgaCTF::Final::Controllers::Flag.new
+          @scoreboard_ctrl = ::VolgaCTF::Final::Controllers::Scoreboard.new
+          @domain_ctrl = ::VolgaCTF::Final::Controllers::Domain.new
         end
 
         def init
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             @domain_ctrl.init
             @service_ctrl.enable_all
             @stage_ctrl.init
@@ -99,7 +99,7 @@ module Themis
 
         def trigger_poll
           cutoff = ::DateTime.now
-          flags = ::Themis::Finals::Models::Flag.living(cutoff).all
+          flags = ::VolgaCTF::Final::Models::Flag.living(cutoff).all
           poll = @round_ctrl.create_poll
 
           @team_ctrl.all_teams(true).each do |team|
@@ -156,11 +156,11 @@ module Themis
         def handle_push(flag, status, label, message)
           return unless @domain_ctrl.available?
 
-          ::Themis::Finals::Models::DB.transaction(
+          ::VolgaCTF::Final::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
           ) do
-            if status == ::Themis::Finals::Checker::Result::UP
+            if status == ::VolgaCTF::Final::Checker::Result::UP
               cutoff = ::DateTime.now
               flag.pushed_at = cutoff
               expires = (cutoff.to_time + @domain_ctrl.settings.flag_lifetime).to_datetime
@@ -168,9 +168,9 @@ module Themis
               flag.label = label
               flag.save
 
-              ::Themis::Finals::Models::DB.after_commit do
+              ::VolgaCTF::Final::Models::DB.after_commit do
                 @logger.info("Successfully pushed flag `#{flag.flag}`!")
-                ::Themis::Finals::Queue::Tasks::PullFlag.perform_async(flag.flag)
+                ::VolgaCTF::Final::Queue::Tasks::PullFlag.perform_async(flag.flag)
               end
             else
               @logger.info("Failed to push flag `#{flag.flag}` (status code "\
@@ -187,14 +187,14 @@ module Themis
         end
 
         def handle_pull(poll, status, message)
-          ::Themis::Finals::Models::DB.transaction(
+          ::VolgaCTF::Final::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
           ) do
-            if status == ::Themis::Finals::Checker::Result::UP
-              poll.state = ::Themis::Finals::Constants::FlagPollState::SUCCESS
+            if status == ::VolgaCTF::Final::Checker::Result::UP
+              poll.state = ::VolgaCTF::Final::Constants::FlagPollState::SUCCESS
             else
-              poll.state = ::Themis::Finals::Constants::FlagPollState::ERROR
+              poll.state = ::VolgaCTF::Final::Constants::FlagPollState::ERROR
             end
 
             poll.updated_at = ::DateTime.now
@@ -208,7 +208,7 @@ module Themis
               message
             )
 
-            if status == ::Themis::Finals::Checker::Result::UP
+            if status == ::VolgaCTF::Final::Checker::Result::UP
               @logger.info("Successfully pulled flag `#{flag.flag}`!")
             else
               @logger.info("Failed to pull flag `#{flag.flag}` (status code "\
@@ -223,10 +223,10 @@ module Themis
           round = flag.round
           flag_poll = nil
 
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             flag_poll = @flag_poll_ctrl.create_flag_poll(flag)
 
-            ::Themis::Finals::Models::DB.after_commit do
+            ::VolgaCTF::Final::Models::DB.after_commit do
               @logger.info("Pulling flag `#{flag.flag}` from service "\
                            "`#{service.name}` of `#{team.name}` ...")
               endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
@@ -243,7 +243,7 @@ module Themis
                   team_name: team.name,
                   service_name: service.name
                 },
-                report_url: "http://#{::ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_pull"
+                report_url: "http://#{::ENV['VOLGACTF_FINAL_MASTER_FQDN']}/api/checker/v2/report_pull"
               }.to_json
 
               call_res = @remote_checker_ctrl.pull(service.checker_endpoint, job_data)
@@ -254,13 +254,13 @@ module Themis
 
         private
         def push_flag(team, service, round)
-          ::Themis::Finals::Models::DB.transaction(
+          ::VolgaCTF::Final::Models::DB.transaction(
             retry_on: [::Sequel::UniqueConstraintViolation],
             num_retries: nil
           ) do
             flag = @flag_ctrl.issue(team, service, round)
 
-            ::Themis::Finals::Models::DB.after_commit do
+            ::VolgaCTF::Final::Models::DB.after_commit do
               @logger.info("Pushing flag `#{flag.flag}` to service "\
                            "`#{service.name}` of `#{team.name}` ...")
               endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
@@ -276,7 +276,7 @@ module Themis
                   team_name: team.name,
                   service_name: service.name
                 },
-                report_url: "http://#{::ENV['THEMIS_FINALS_MASTER_FQDN']}/api/checker/v2/report_push"
+                report_url: "http://#{::ENV['VOLGACTF_FINAL_MASTER_FQDN']}/api/checker/v2/report_push"
               }.to_json
 
               call_res = @remote_checker_ctrl.push(service.checker_endpoint, job_data)
@@ -286,9 +286,9 @@ module Themis
         end
 
         def recalculate_round(round)
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             @score_ctrl.init_scores(round)
-            rel_flags = ::Themis::Finals::Models::Flag.relevant(round)
+            rel_flags = ::VolgaCTF::Final::Models::Flag.relevant(round)
             err_update = false
             rel_flags.each do |flag|
               begin
@@ -310,7 +310,7 @@ module Themis
             @service_ctrl.ensure_disable(round)
             @score_ctrl.notify_team_scores(round)
 
-            ::Themis::Finals::Models::DB.after_commit do
+            ::VolgaCTF::Final::Models::DB.after_commit do
               @logger.info("Round #{round_num} finished!")
             end
           end

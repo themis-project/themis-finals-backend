@@ -3,8 +3,8 @@ require './lib/domain/service'
 require './lib/domain/settings'
 require './lib/domain/network'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Domain
     end
   end

@@ -1,7 +1,7 @@
 require 'ip'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Domain
       def self.network(&block)
         network_dsl = NetworkDSL.new

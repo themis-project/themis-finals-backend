@@ -6,27 +6,27 @@ require './lib/utils/event_emitter'
 require './lib/constants/submit_result'
 require './lib/controllers/domain'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Attack
         def initialize
-          @domain_ctrl = ::Themis::Finals::Controllers::Domain.new
-          @team_service_state_ctrl = ::Themis::Finals::Controllers::TeamServiceState.new
-          @round_ctrl = ::Themis::Finals::Controllers::Round.new
+          @domain_ctrl = ::VolgaCTF::Final::Controllers::Domain.new
+          @team_service_state_ctrl = ::VolgaCTF::Final::Controllers::TeamServiceState.new
+          @round_ctrl = ::VolgaCTF::Final::Controllers::Round.new
         end
 
         def handle(stage, team, data)
           cutoff = ::DateTime.now
-          attempt = ::Themis::Finals::Models::AttackAttempt.create(
+          attempt = ::VolgaCTF::Final::Models::AttackAttempt.create(
             occured_at: cutoff,
             request: data.to_s,
-            response: ::Themis::Finals::Constants::SubmitResult::ERROR_UNKNOWN,
+            response: ::VolgaCTF::Final::Constants::SubmitResult::ERROR_UNKNOWN,
             team_id: team.id
           )
 
           unless data.respond_to?('match')
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID
             attempt.response = r
             attempt.save
             return r
@@ -34,37 +34,37 @@ module Themis
 
           match_ = data.match(/^[\da-f]{32}=$/)
           if match_.nil?
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_INVALID
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID
             attempt.response = r
             attempt.save
             return r
           end
 
-          flag = ::Themis::Finals::Models::Flag.first_match(match_[0])
+          flag = ::VolgaCTF::Final::Models::Flag.first_match(match_[0])
 
           if flag.nil?
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_NOT_FOUND
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_NOT_FOUND
             attempt.response = r
             attempt.save
             return r
           end
 
           if flag.team_id == team.id
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_YOUR_OWN
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_YOUR_OWN
             attempt.response = r
             attempt.save
             return r
           end
 
           unless @team_service_state_ctrl.up?(stage, team, flag.service)
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID
             attempt.response = r
             attempt.save
             return r
           end
 
           if flag.expired_at < cutoff
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_EXPIRED
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_EXPIRED
             attempt.response = r
             attempt.save
             return r
@@ -72,8 +72,8 @@ module Themis
 
           r = nil
           begin
-            ::Themis::Finals::Models::DB.transaction do
-              ::Themis::Finals::Models::Attack.create(
+            ::VolgaCTF::Final::Models::DB.transaction do
+              ::VolgaCTF::Final::Models::Attack.create(
                 occured_at: cutoff,
                 processed: false,
                 team_id: team.id,
@@ -84,12 +84,12 @@ module Themis
                 flag.service.award_defence_after = @round_ctrl.last_number
                 flag.service.save
 
-                ::Themis::Finals::Utils::EventEmitter.broadcast(
+                ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
                   'service/modify',
                   flag.service.serialize
                 )
 
-                ::Themis::Finals::Utils::EventEmitter.emit_log(
+                ::VolgaCTF::Final::Utils::EventEmitter.emit_log(
                   45,
                   service_name: flag.service.name,
                   service_award_defence_after: flag.service.award_defence_after
@@ -97,9 +97,9 @@ module Themis
 
               end
 
-              r = ::Themis::Finals::Constants::SubmitResult::SUCCESS
+              r = ::VolgaCTF::Final::Constants::SubmitResult::SUCCESS
 
-              ::Themis::Finals::Utils::EventEmitter.emit_log(
+              ::VolgaCTF::Final::Utils::EventEmitter.emit_log(
                 4,
                 actor_team_id: team.id,
                 target_team_id: flag.team_id,
@@ -107,7 +107,7 @@ module Themis
               )
             end
           rescue ::Sequel::UniqueConstraintViolation => e
-            r = ::Themis::Finals::Constants::SubmitResult::ERROR_FLAG_SUBMITTED
+            r = ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_SUBMITTED
           end
 
           attempt.response = r

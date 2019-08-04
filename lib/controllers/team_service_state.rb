@@ -1,12 +1,12 @@
 require 'date'
 
-require 'themis/finals/checker/result'
+require 'volgactf/final/checker/result'
 
 require './lib/constants/team_service_state'
 require './lib/utils/event_emitter'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class TeamServiceState
         def up?(stage, team, service)
@@ -14,30 +14,30 @@ module Themis
             return false
           end
 
-          pull = ::Themis::Finals::Models::TeamServicePullState.first(
+          pull = ::VolgaCTF::Final::Models::TeamServicePullState.first(
             team_id: team.id,
             service_id: service.id
           )
-          pull_ok = !pull.nil? && pull.state == ::Themis::Finals::Constants::TeamServiceState::UP
+          pull_ok = !pull.nil? && pull.state == ::VolgaCTF::Final::Constants::TeamServiceState::UP
 
           if stage.any?(:pausing, :finishing)
             return pull_ok
           end
 
-          push = ::Themis::Finals::Models::TeamServicePushState.first(
+          push = ::VolgaCTF::Final::Models::TeamServicePushState.first(
             team_id: team.id,
             service_id: service.id
           )
-          push_ok = !push.nil? && push.state == ::Themis::Finals::Constants::TeamServiceState::UP
+          push_ok = !push.nil? && push.state == ::VolgaCTF::Final::Constants::TeamServiceState::UP
 
           push_ok && pull_ok
         end
 
         def update_push_state(team, service, status, message)
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             service_state = get_service_state(status)
 
-            ::Themis::Finals::Models::TeamServicePushHistoryState.create(
+            ::VolgaCTF::Final::Models::TeamServicePushHistoryState.create(
               state: service_state,
               message: message,
               created_at: ::DateTime.now,
@@ -46,14 +46,14 @@ module Themis
             )
 
             team_service_state = \
-              ::Themis::Finals::Models::TeamServicePushState.first(
+              ::VolgaCTF::Final::Models::TeamServicePushState.first(
                 service_id: service.id,
                 team_id: team.id
               )
 
             if team_service_state.nil?
               team_service_state = \
-                ::Themis::Finals::Models::TeamServicePushState.create(
+                ::VolgaCTF::Final::Models::TeamServicePushState.create(
                   state: service_state,
                   message: message,
                   created_at: ::DateTime.now,
@@ -88,11 +88,11 @@ module Themis
 
             team_data = {}
 
-            ::Themis::Finals::Models::Team.all.each do |t|
+            ::VolgaCTF::Final::Models::Team.all.each do |t|
               team_data[t.id] = (t.id == team_service_state.team_id) ? full_event_data : partial_event_data
             end
 
-            ::Themis::Finals::Utils::EventEmitter.emit(
+            ::VolgaCTF::Final::Utils::EventEmitter.emit(
               'team/service/push-state',
               full_event_data,
               nil,
@@ -100,7 +100,7 @@ module Themis
               team_data
             )
 
-            ::Themis::Finals::Utils::EventEmitter.emit_log(
+            ::VolgaCTF::Final::Utils::EventEmitter.emit_log(
               31,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
@@ -111,10 +111,10 @@ module Themis
         end
 
         def update_pull_state(team, service, status, message)
-          ::Themis::Finals::Models::DB.transaction do
+          ::VolgaCTF::Final::Models::DB.transaction do
             service_state = get_service_state(status)
 
-            ::Themis::Finals::Models::TeamServicePullHistoryState.create(
+            ::VolgaCTF::Final::Models::TeamServicePullHistoryState.create(
               state: service_state,
               message: message,
               created_at: ::DateTime.now,
@@ -123,14 +123,14 @@ module Themis
             )
 
             team_service_state = \
-              ::Themis::Finals::Models::TeamServicePullState.first(
+              ::VolgaCTF::Final::Models::TeamServicePullState.first(
                 service_id: service.id,
                 team_id: team.id
               )
 
             if team_service_state.nil?
               team_service_state = \
-                ::Themis::Finals::Models::TeamServicePullState.create(
+                ::VolgaCTF::Final::Models::TeamServicePullState.create(
                   state: service_state,
                   message: message,
                   created_at: ::DateTime.now,
@@ -164,11 +164,11 @@ module Themis
             }
 
             team_data = {}
-            ::Themis::Finals::Models::Team.all.each do |t|
+            ::VolgaCTF::Final::Models::Team.all.each do |t|
               team_data[t.id] = (t.id == team_service_state.team_id) ? full_event_data : partial_event_data
             end
 
-            ::Themis::Finals::Utils::EventEmitter.emit(
+            ::VolgaCTF::Final::Utils::EventEmitter.emit(
               'team/service/pull-state',
               full_event_data,
               nil,
@@ -176,7 +176,7 @@ module Themis
               team_data
             )
 
-            ::Themis::Finals::Utils::EventEmitter.emit_log(
+            ::VolgaCTF::Final::Utils::EventEmitter.emit_log(
               32,
               team_id: team_service_state.team_id,
               service_id: team_service_state.service_id,
@@ -189,18 +189,18 @@ module Themis
         private
         def get_service_state(status)
           case status
-          when ::Themis::Finals::Checker::Result::UP
-            ::Themis::Finals::Constants::TeamServiceState::UP
-          when ::Themis::Finals::Checker::Result::CORRUPT
-            ::Themis::Finals::Constants::TeamServiceState::CORRUPT
-          when ::Themis::Finals::Checker::Result::MUMBLE
-            ::Themis::Finals::Constants::TeamServiceState::MUMBLE
-          when ::Themis::Finals::Checker::Result::DOWN
-            ::Themis::Finals::Constants::TeamServiceState::DOWN
-          when ::Themis::Finals::Checker::Result::INTERNAL_ERROR
-            ::Themis::Finals::Constants::TeamServiceState::INTERNAL_ERROR
+          when ::VolgaCTF::Final::Checker::Result::UP
+            ::VolgaCTF::Final::Constants::TeamServiceState::UP
+          when ::VolgaCTF::Final::Checker::Result::CORRUPT
+            ::VolgaCTF::Final::Constants::TeamServiceState::CORRUPT
+          when ::VolgaCTF::Final::Checker::Result::MUMBLE
+            ::VolgaCTF::Final::Constants::TeamServiceState::MUMBLE
+          when ::VolgaCTF::Final::Checker::Result::DOWN
+            ::VolgaCTF::Final::Constants::TeamServiceState::DOWN
+          when ::VolgaCTF::Final::Checker::Result::INTERNAL_ERROR
+            ::VolgaCTF::Final::Constants::TeamServiceState::INTERNAL_ERROR
           else
-            ::Themis::Finals::Constants::TeamServiceState::NOT_AVAILABLE
+            ::VolgaCTF::Final::Constants::TeamServiceState::NOT_AVAILABLE
           end
         end
       end

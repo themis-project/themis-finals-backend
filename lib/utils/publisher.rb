@@ -4,13 +4,13 @@ require './lib/utils/logger'
 
 # TODO: Deal with Redis::ConnectionError exception
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Utils
       class Publisher
         def initialize
           @_client = nil
-          @_logger = ::Themis::Finals::Utils::Logger.get
+          @_logger = ::VolgaCTF::Final::Utils::Logger.get
         end
 
         def publish(channel, message, max_retries = 3)
@@ -39,7 +39,7 @@ module Themis
           connection_params = {
             host: ::ENV['REDIS_HOST'] || '127.0.0.1',
             port: ::ENV['REDIS_PORT'].to_i || 6379,
-            db: ::ENV['THEMIS_FINALS_STREAM_REDIS_DB'].to_i || 0
+            db: ::ENV['VOLGACTF_FINAL_STREAM_REDIS_DB'].to_i || 0
           }
           unless ::ENV.fetch('REDIS_PASSWORD', nil).nil?
             connection_params[:password] = ::ENV['REDIS_PASSWORD']

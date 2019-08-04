@@ -6,16 +6,16 @@ require './lib/utils/event_emitter'
 require './lib/utils/logger'
 require './lib/constants/position_trend'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Scoreboard
         def initialize
-          @logger = ::Themis::Finals::Utils::Logger.get
+          @logger = ::VolgaCTF::Final::Utils::Logger.get
         end
 
         def broadcast?
-          scoreboard_state = ::Themis::Finals::Models::ScoreboardState.last
+          scoreboard_state = ::VolgaCTF::Final::Models::ScoreboardState.last
           return scoreboard_state.nil? ? true : scoreboard_state.enabled
         end
 
@@ -23,8 +23,8 @@ module Themis
           cutoff = ::DateTime.now
           positions = format_team_positions(get_team_positions)
 
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::ScoreboardPosition.create(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::ScoreboardPosition.create(
               created_at: cutoff,
               data: positions
             )
@@ -35,12 +35,12 @@ module Themis
             }
 
             if broadcast?
-              ::Themis::Finals::Utils::EventEmitter.broadcast(
+              ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
                 'scoreboard',
                 event_data
               )
             else
-              ::Themis::Finals::Utils::EventEmitter.emit(
+              ::VolgaCTF::Final::Utils::EventEmitter.emit(
                 'scoreboard',
                 event_data,
                 nil,
@@ -52,20 +52,20 @@ module Themis
 
         def enable_broadcast
           cutoff = ::DateTime.now
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::ScoreboardState.create(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::ScoreboardState.create(
               enabled: true,
               created_at: cutoff
             )
 
             positions = format_team_positions(get_team_positions)
 
-            ::Themis::Finals::Models::ScoreboardPosition.create(
+            ::VolgaCTF::Final::Models::ScoreboardPosition.create(
               created_at: cutoff,
               data: positions
             )
 
-            ::Themis::Finals::Utils::EventEmitter.broadcast(
+            ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
               'scoreboard',
               {
                 muted: false,
@@ -77,20 +77,20 @@ module Themis
 
         def disable_broadcast
           cutoff = ::DateTime.now
-          ::Themis::Finals::Models::DB.transaction do
-            ::Themis::Finals::Models::ScoreboardState.create(
+          ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Models::ScoreboardState.create(
               enabled: false,
               created_at: cutoff
             )
 
             positions = format_team_positions(get_team_positions)
 
-            ::Themis::Finals::Models::ScoreboardHistoryPosition.create(
+            ::VolgaCTF::Final::Models::ScoreboardHistoryPosition.create(
               created_at: cutoff,
               data: positions
             )
 
-            ::Themis::Finals::Models::ScoreboardPosition.create(
+            ::VolgaCTF::Final::Models::ScoreboardPosition.create(
               created_at: cutoff,
               data: positions
             )
@@ -105,7 +105,7 @@ module Themis
               positions: positions
             }
 
-            ::Themis::Finals::Utils::EventEmitter.emit(
+            ::VolgaCTF::Final::Utils::EventEmitter.emit(
               'scoreboard',
               internal_data,
               other_data,
@@ -124,19 +124,19 @@ module Themis
               availability_points: pos[:availability_points],
               defence_points: pos[:defence_points],
               last_attack: pos[:last_attack].nil? ? nil : pos[:last_attack].iso8601,
-              trend: pos[:trend].nil? ? ::Themis::Finals::Constants::PositionTrend::FLAT : pos[:trend]
+              trend: pos[:trend].nil? ? ::VolgaCTF::Final::Constants::PositionTrend::FLAT : pos[:trend]
             }
           }
         end
 
         def get_team_positions
-          positions = ::Themis::Finals::Models::Team.all.map do |team|
-            last_attack = ::Themis::Finals::Models::Attack.last(
+          positions = ::VolgaCTF::Final::Models::Team.all.map do |team|
+            last_attack = ::VolgaCTF::Final::Models::Attack.last(
               team_id: team.id,
               processed: true
             )
 
-            last_score = ::Themis::Finals::Models::TotalScore.first(
+            last_score = ::VolgaCTF::Final::Models::TotalScore.first(
               team_id: team.id
             )
 
@@ -156,22 +156,22 @@ module Themis
             }
           end
 
-          precision = ::ENV.fetch('THEMIS_FINALS_SCORE_PRECISION', '4').to_i
+          precision = ::ENV.fetch('VOLGACTF_FINAL_SCORE_PRECISION', '4').to_i
           positions.sort! { |a, b| sort_rows(a, b, precision) }
 
           estimate_trends(positions)
         end
 
         def estimate_trends(positions)
-          latest_round = ::Themis::Finals::Models::Round.latest_ready
+          latest_round = ::VolgaCTF::Final::Models::Round.latest_ready
           if latest_round.nil?
             return positions
           end
 
-          trend_depth = ::ENV.fetch('THEMIS_FINALS_TREND_DEPTH', '5').to_i
+          trend_depth = ::ENV.fetch('VOLGACTF_FINAL_TREND_DEPTH', '5').to_i
           start_num = latest_round.id - trend_depth + 1
           end_num = latest_round.id
-          scores = ::Themis::Finals::Models::Score.filter_by_round_range(start_num, end_num).all
+          scores = ::VolgaCTF::Final::Models::Score.filter_by_round_range(start_num, end_num).all
 
           positions.each_with_index.map do |pos, ndx|
             cur_team_scores = scores.select { |s| s.team_id == pos[:team_id] }
@@ -196,26 +196,26 @@ module Themis
 
         def estimate_trend(prev_total, cur_total, next_total)
           if prev_total.nil? && next_total.nil?  # only one team (?)
-            return ::Themis::Finals::Constants::PositionTrend::FLAT
+            return ::VolgaCTF::Final::Constants::PositionTrend::FLAT
           elsif prev_total.nil?  # the first team
             if cur_total >= next_total
-              return ::Themis::Finals::Constants::PositionTrend::FLAT
+              return ::VolgaCTF::Final::Constants::PositionTrend::FLAT
             else
-              return ::Themis::Finals::Constants::PositionTrend::DOWN
+              return ::VolgaCTF::Final::Constants::PositionTrend::DOWN
             end
           elsif next_total.nil?  # the last team
             if cur_total <= prev_total
-              return ::Themis::Finals::Constants::PositionTrend::FLAT
+              return ::VolgaCTF::Final::Constants::PositionTrend::FLAT
             else
-              return ::Themis::Finals::Constants::PositionTrend::UP
+              return ::VolgaCTF::Final::Constants::PositionTrend::UP
             end
           else  # a team in between
             if cur_total > prev_total && cur_total >= next_total
-              return ::Themis::Finals::Constants::PositionTrend::UP
+              return ::VolgaCTF::Final::Constants::PositionTrend::UP
             elsif cur_total < prev_total && cur_total < next_total
-              return ::Themis::Finals::Constants::PositionTrend::DOWN
+              return ::VolgaCTF::Final::Constants::PositionTrend::DOWN
             else
-              return ::Themis::Finals::Constants::PositionTrend::FLAT
+              return ::VolgaCTF::Final::Constants::PositionTrend::FLAT
             end
           end
         end

@@ -1,7 +1,7 @@
 require 'date'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Models
       require 'sequel'
 

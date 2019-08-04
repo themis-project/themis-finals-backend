@@ -2,16 +2,16 @@ require 'ip'
 
 require './lib/controllers/domain'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Identity
         def initialize
-          @domain_ctrl = ::Themis::Finals::Controllers::Domain.new
+          @domain_ctrl = ::VolgaCTF::Final::Controllers::Domain.new
         end
 
         def get_team(remote_ip)
-          ::Themis::Finals::Models::Team.all.detect do |team|
+          ::VolgaCTF::Final::Models::Team.all.detect do |team|
             network = ::IP.new(team.network)
             remote_ip.is_in?(network)
           end

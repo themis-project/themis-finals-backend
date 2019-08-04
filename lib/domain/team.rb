@@ -1,5 +1,5 @@
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Domain
       def self.team(name, &block)
         team_dsl = TeamDSL.new name

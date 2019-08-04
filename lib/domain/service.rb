@@ -1,5 +1,5 @@
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Domain
       def self.service(name, &block)
         service_dsl = ServiceDSL.new name

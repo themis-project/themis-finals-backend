@@ -20,4 +20,4 @@ gem 'time_difference'
 gem 'activesupport'
 gem 'mini_magick'
 
-gem 'themis-finals-checker-result', '~> 1.0.0'
+gem 'volgactf-final-checker-result', '~> 1.0.0'

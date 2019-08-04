@@ -1,7 +1,7 @@
 require 'logger'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Utils
       module Logger
         def self.get

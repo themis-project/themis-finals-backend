@@ -53,7 +53,7 @@ namespace :db do
       ::Sequel::Migrator.run(db, 'migrations')
     end
 
-    ::FileUtils.rm_f(::Dir.glob("#{::ENV['THEMIS_FINALS_TEAM_LOGO_DIR']}/*"))
+    ::FileUtils.rm_f(::Dir.glob("#{::ENV['VOLGACTF_FINAL_TEAM_LOGO_DIR']}/*"))
 
     puts 'OK'
   end
@@ -63,8 +63,8 @@ def change_competition_stage(command)
   require './lib/models/bootstrap'
   require './lib/controllers/competition'
 
-  ::Themis::Finals::Models.init
-  competition_ctrl = ::Themis::Finals::Controllers::Competition.new
+  ::VolgaCTF::Final::Models.init
+  competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
 
   case command
   when :init
@@ -115,8 +115,8 @@ def change_scoreboard_state(state)
   require './lib/models/bootstrap'
   require './lib/controllers/scoreboard'
 
-  ::Themis::Finals::Models.init
-  scoreboard_ctrl = ::Themis::Finals::Controllers::Scoreboard.new
+  ::VolgaCTF::Final::Models.init
+  scoreboard_ctrl = ::VolgaCTF::Final::Controllers::Scoreboard.new
 
   case state
   when :enabled
@@ -146,8 +146,8 @@ namespace :service do
     require './lib/models/bootstrap'
     require './lib/controllers/domain'
 
-    ::Themis::Finals::Models.init
-    domain_ctrl = ::Themis::Finals::Controllers::Domain.new
+    ::VolgaCTF::Final::Models.init
+    domain_ctrl = ::VolgaCTF::Final::Controllers::Domain.new
     domain_ctrl.update
     puts 'OK'
   end
@@ -158,8 +158,8 @@ namespace :service do
     require './lib/models/bootstrap'
     require './lib/controllers/service'
 
-    ::Themis::Finals::Models.init
-    service_ctrl = ::Themis::Finals::Controllers::Service.new
+    ::VolgaCTF::Final::Models.init
+    service_ctrl = ::VolgaCTF::Final::Controllers::Service.new
     service_ctrl.enqueue_disable(args[:alias], args[:round].to_i)
     puts 'OK'
   end
@@ -170,8 +170,8 @@ namespace :service do
     require './lib/models/bootstrap'
     require './lib/controllers/service'
 
-    ::Themis::Finals::Models.init
-    service_ctrl = ::Themis::Finals::Controllers::Service.new
+    ::VolgaCTF::Final::Models.init
+    service_ctrl = ::VolgaCTF::Final::Controllers::Service.new
     service_ctrl.enqueue_enable(args[:alias], args[:round].to_i)
     puts 'OK'
   end
@@ -185,24 +185,24 @@ namespace :report do
     require 'time_difference'
     require 'active_support/time'
 
-    ::Themis::Finals::Models.init
+    ::VolgaCTF::Final::Models.init
     ::Time.zone = 'Europe/Samara'
 
     rows = []
 
-    num_teams = ::Themis::Finals::Models::Team.count
+    num_teams = ::VolgaCTF::Final::Models::Team.count
     rows << ['Number of teams', num_teams]
 
-    num_services = ::Themis::Finals::Models::Service.count
+    num_services = ::VolgaCTF::Final::Models::Service.count
     rows << ['Number of services', num_services]
 
-    num_rounds = ::Themis::Finals::Models::Round.count
+    num_rounds = ::VolgaCTF::Final::Models::Round.count
     rows << ['Number of rounds', num_rounds]
 
     contest_started = nil
     contest_ended = nil
 
-    ::Themis::Finals::Models::CompetitionStage.all.each do |entry|
+    ::VolgaCTF::Final::Models::CompetitionStage.all.each do |entry|
       if contest_started.nil? && entry.started?
         contest_started = entry.created_at
       end
@@ -239,22 +239,22 @@ namespace :report do
     require 'time_difference'
     require 'active_support/time'
 
-    ::Themis::Finals::Models.init
+    ::VolgaCTF::Final::Models.init
     ::Time.zone = 'Europe/Samara'
 
     rows = []
 
-    num_issued_flags = ::Themis::Finals::Models::Flag.count
+    num_issued_flags = ::VolgaCTF::Final::Models::Flag.count
     rows << ['Issued flags', num_issued_flags]
 
-    num_push_attempts_up = ::Themis::Finals::Models::TeamServicePushHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::UP).count
+    num_push_attempts_up = ::VolgaCTF::Final::Models::TeamServicePushHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::UP).count
     num_push_attempts_up_rel = Float(num_push_attempts_up) * 100 / num_issued_flags
     rows << ['Number of successful push attempts', "#{num_push_attempts_up} (#{num_push_attempts_up_rel.round(2)}%)"]
 
-    num_push_attempts_down = ::Themis::Finals::Models::TeamServicePushHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::DOWN).count
+    num_push_attempts_down = ::VolgaCTF::Final::Models::TeamServicePushHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::DOWN).count
     num_push_attempts_down_rel = Float(num_push_attempts_down) * 100 / num_issued_flags
 
-    num_push_attempts_mumble = ::Themis::Finals::Models::TeamServicePushHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::MUMBLE).count
+    num_push_attempts_mumble = ::VolgaCTF::Final::Models::TeamServicePushHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::MUMBLE).count
     num_push_attempts_mumble_rel = Float(num_push_attempts_mumble) * 100 / num_issued_flags
 
     num_push_attempts_na = num_issued_flags - num_push_attempts_up - num_push_attempts_down - num_push_attempts_mumble
@@ -269,27 +269,27 @@ namespace :report do
     push_attempts_failed_text << " N/A #{num_push_attempts_na} (#{num_push_attempts_na_rel.round(2)}%)"
     rows << ['Number of failed push attempts', push_attempts_failed_text.join("\n")]
 
-    num_pull_attempts = ::Themis::Finals::Models::TeamServicePullHistoryState.count
+    num_pull_attempts = ::VolgaCTF::Final::Models::TeamServicePullHistoryState.count
     rows << ['Number of pull attempts', num_pull_attempts]
 
-    num_pull_attempts_up = ::Themis::Finals::Models::TeamServicePullHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::UP).count
+    num_pull_attempts_up = ::VolgaCTF::Final::Models::TeamServicePullHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::UP).count
     num_pull_attempts_up_rel = Float(num_pull_attempts_up) * 100 / num_pull_attempts
     rows << ['Number of successful pull attempts', "#{num_pull_attempts_up} (#{num_pull_attempts_up_rel.round(2)}%)"]
 
-    num_pull_attempts_failed = ::Themis::Finals::Models::TeamServicePullHistoryState.exclude(state: ::Themis::Finals::Constants::TeamServiceState::UP).count
+    num_pull_attempts_failed = ::VolgaCTF::Final::Models::TeamServicePullHistoryState.exclude(state: ::VolgaCTF::Final::Constants::TeamServiceState::UP).count
     num_pull_attempts_failed_rel = Float(num_pull_attempts_failed) * 100 / num_pull_attempts
     pull_attempts_failed_text = []
     pull_attempts_failed_text << "#{num_pull_attempts_failed} (#{num_pull_attempts_failed_rel.round(2)}%)"
 
-    num_pull_attempts_down = ::Themis::Finals::Models::TeamServicePullHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::DOWN).count
+    num_pull_attempts_down = ::VolgaCTF::Final::Models::TeamServicePullHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::DOWN).count
     num_pull_attempts_down_rel = Float(num_pull_attempts_down) * 100 / num_pull_attempts
     pull_attempts_failed_text << " DOWN #{num_pull_attempts_down} (#{num_pull_attempts_down_rel.round(2)}%)"
 
-    num_pull_attempts_corrupt = ::Themis::Finals::Models::TeamServicePullHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::CORRUPT).count
+    num_pull_attempts_corrupt = ::VolgaCTF::Final::Models::TeamServicePullHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::CORRUPT).count
     num_pull_attempts_corrupt_rel = Float(num_pull_attempts_corrupt) * 100 / num_pull_attempts
     pull_attempts_failed_text << " CORRUPT #{num_pull_attempts_corrupt} (#{num_pull_attempts_corrupt_rel.round(2)}%)"
 
-    num_pull_attempts_mumble = ::Themis::Finals::Models::TeamServicePullHistoryState.where(state: ::Themis::Finals::Constants::TeamServiceState::MUMBLE).count
+    num_pull_attempts_mumble = ::VolgaCTF::Final::Models::TeamServicePullHistoryState.where(state: ::VolgaCTF::Final::Constants::TeamServiceState::MUMBLE).count
     num_pull_attempts_mumble_rel = Float(num_pull_attempts_mumble) * 100 / num_pull_attempts
     pull_attempts_failed_text << " MUMBLE #{num_pull_attempts_mumble} (#{num_pull_attempts_mumble_rel.round(2)}%)"
 
@@ -313,32 +313,31 @@ namespace :report do
     # require './lib/constants/team_service_state'
     require 'terminal-table'
     require 'active_support/time'
-    require 'themis/finals/attack/result'
 
-    ::Themis::Finals::Models.init
+    ::VolgaCTF::Final::Models.init
     ::Time.zone = 'Europe/Samara'
 
     rows = []
 
-    num_attack_attempts = ::Themis::Finals::Models::AttackAttempt.count
+    num_attack_attempts = ::VolgaCTF::Final::Models::AttackAttempt.count
     rows << ['Number of attack attempts', num_attack_attempts]
 
-    num_attacks = ::Themis::Finals::Models::Attack.count
+    num_attacks = ::VolgaCTF::Final::Models::Attack.count
     num_attacks_rel = Float(num_attacks) * 100 / num_attack_attempts
     rows << ['Number of successful attacks', "#{num_attacks} (#{num_attacks_rel.round(2)}%)"]
 
     failed_categories = {
-      ::Themis::Finals::Attack::Result::ERR_INVALID_FORMAT => 'ERR_INVALID_FORMAT',
-      ::Themis::Finals::Attack::Result::ERR_ATTEMPTS_LIMIT => 'ERR_ATTEMPTS_LIMIT',
-      ::Themis::Finals::Attack::Result::ERR_FLAG_EXPIRED => 'ERR_FLAG_EXPIRED',
-      ::Themis::Finals::Attack::Result::ERR_FLAG_YOURS => 'ERR_FLAG_YOURS',
-      ::Themis::Finals::Attack::Result::ERR_FLAG_SUBMITTED => 'ERR_FLAG_SUBMITTED',
-      ::Themis::Finals::Attack::Result::ERR_FLAG_NOT_FOUND => 'ERR_FLAG_NOT_FOUND',
-      ::Themis::Finals::Attack::Result::ERR_SERVICE_NOT_UP => 'ERR_SERVICE_NOT_UP'
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID => 'ERROR_FLAG_INVALID',
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_RATELIMIT => 'ERROR_RATELIMIT',
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_EXPIRED => 'ERROR_FLAG_EXPIRED',
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_YOUR_OWN => 'ERROR_FLAG_YOUR_OWN',
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_SUBMITTED => 'ERROR_FLAG_SUBMITTED',
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_NOT_FOUND => 'ERROR_FLAG_NOT_FOUND',
+      ::VolgaCTF::Final::Constants::SubmitResult::ERROR_SERVICE_STATE_INVALID => 'ERROR_SERVICE_STATE_INVALID'
     }
 
     failed_categories.each do |category, description|
-      absolute_value = ::Themis::Finals::Models::AttackAttempt.where(response: category).count
+      absolute_value = ::VolgaCTF::Final::Models::AttackAttempt.where(response: category).count
       relative_value = Float(absolute_value) * 100 / num_attack_attempts
       rows << [
         "Number of failed attack attempts (#{description})",
@@ -360,16 +359,16 @@ namespace :report do
   desc 'Show services which have been attacked by teams'
   task :team_services do
     require './lib/models/bootstrap'
-    ::Themis::Finals::Models.init
+    ::VolgaCTF::Final::Models.init
 
     report = {}
 
-    ::Themis::Finals::Models::Team.all.each do |team|
+    ::VolgaCTF::Final::Models::Team.all.each do |team|
       report[team.id] = Set.new
     end
 
-    ::Themis::Finals::Models::Attack.all.each do |attack|
-      flag = ::Themis::Finals::Models::Flag[attack.flag_id]
+    ::VolgaCTF::Final::Models::Attack.all.each do |attack|
+      flag = ::VolgaCTF::Final::Models::Flag[attack.flag_id]
       report[attack.team_id].add(flag.service_id)
     end
 
@@ -377,9 +376,9 @@ namespace :report do
     rows = []
     report.each do |team_id, service_list|
       row = []
-      row << ::Themis::Finals::Models::Team[team_id].name
+      row << ::VolgaCTF::Final::Models::Team[team_id].name
       services = service_list.map do |service_id|
-        ::Themis::Finals::Models::Service[service_id].name
+        ::VolgaCTF::Final::Models::Service[service_id].name
       end
       row << services.join("\n")
       rows << row

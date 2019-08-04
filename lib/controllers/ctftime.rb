@@ -1,10 +1,10 @@
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class CTFTime
         def format_positions(positions)
           teams = {}
-          ::Themis::Finals::Models::Team.all.each do |team|
+          ::VolgaCTF::Final::Models::Team.all.each do |team|
             teams[team.id] = team.name
           end
 

@@ -1,7 +1,7 @@
 require 'sequel'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Models
       class ScoreboardHistoryPosition < ::Sequel::Model
       end

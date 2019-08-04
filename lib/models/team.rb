@@ -1,7 +1,7 @@
 require 'sequel'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Models
       class Team < ::Sequel::Model
         one_to_many :team_service_states

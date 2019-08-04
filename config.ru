@@ -1,3 +1,3 @@
 require './lib/server/application'
 
-run ::Themis::Finals::Server::Application
+run ::VolgaCTF::Final::Server::Application

@@ -2,8 +2,8 @@ require 'date'
 require './lib/domain/network'
 require './lib/domain/settings'
 
-module Themis
-  module Finals
+module VolgaCTF
+  module Final
     module Controllers
       class Domain
         def initialize
@@ -13,9 +13,9 @@ module Themis
         end
 
         def init
-          ::Themis::Finals::Models::DB.transaction do
-            network = ::Themis::Finals::Domain.get_network
-            settings = ::Themis::Finals::Domain.get_settings
+          ::VolgaCTF::Final::Models::DB.transaction do
+            network = ::VolgaCTF::Final::Domain.get_network
+            settings = ::VolgaCTF::Final::Domain.get_settings
             data = {
               network: {
                 internal: network.internal.map { |x| x.to_s }
@@ -28,34 +28,34 @@ module Themis
               }
             }
 
-            configuration = ::Themis::Finals::Models::Configuration.create(
+            configuration = ::VolgaCTF::Final::Models::Configuration.create(
               data: data,
               created: ::DateTime.now
             )
 
             require './lib/controllers/team'
-            team_ctrl = ::Themis::Finals::Controllers::Team.new
-            team_ctrl.init_teams(::Themis::Finals::Domain.get_teams)
+            team_ctrl = ::VolgaCTF::Final::Controllers::Team.new
+            team_ctrl.init_teams(::VolgaCTF::Final::Domain.get_teams)
 
             require './lib/controllers/service'
-            service_ctrl = ::Themis::Finals::Controllers::Service.new
-            service_ctrl.init_services(::Themis::Finals::Domain.get_services)
+            service_ctrl = ::VolgaCTF::Final::Controllers::Service.new
+            service_ctrl.init_services(::VolgaCTF::Final::Domain.get_services)
           end
         end
 
         def update
           require './lib/controllers/service'
-          service_ctrl = ::Themis::Finals::Controllers::Service.new
+          service_ctrl = ::VolgaCTF::Final::Controllers::Service.new
 
-          ::Themis::Finals::Models::DB.transaction do
-            service_ctrl.init_services(::Themis::Finals::Domain.get_services)
+          ::VolgaCTF::Final::Models::DB.transaction do
+            service_ctrl.init_services(::VolgaCTF::Final::Domain.get_services)
           end
         end
 
         def available?
           return true unless @data.nil?
 
-          configuration = ::Themis::Finals::Models::Configuration.first
+          configuration = ::VolgaCTF::Final::Models::Configuration.first
           unless configuration.nil?
             @data = configuration.data
           end
@@ -67,7 +67,7 @@ module Themis
           raise "Configuration unavailable!" if @data.nil?
 
           if @network.nil?
-            dsl = ::Themis::Finals::Domain::NetworkDSL.new
+            dsl = ::VolgaCTF::Final::Domain::NetworkDSL.new
             dsl.internal(*@data['network']['internal'])
             @network = dsl.network
           end
@@ -79,7 +79,7 @@ module Themis
           raise "Configuration unavailable!" if @data.nil?
 
           if @settings.nil?
-            dsl = ::Themis::Finals::Domain::SettingsDSL.new
+            dsl = ::VolgaCTF::Final::Domain::SettingsDSL.new
             dsl.flag_lifetime(@data['settings']['flag_lifetime'])
             dsl.round_timespan(@data['settings']['round_timespan'])
             dsl.poll_timespan(@data['settings']['poll_timespan'])
