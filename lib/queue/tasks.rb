@@ -1,14 +1,14 @@
 require 'sidekiq'
 require 'mini_magick'
 
-require './lib/models/bootstrap'
-require './lib/utils/logger'
-require './lib/controllers/competition_stage'
-require './lib/controllers/competition'
-require './lib/controllers/image'
-require './lib/utils/logger'
+require './lib/model/bootstrap'
+require './lib/util/logger'
+require './lib/controller/competition_stage'
+require './lib/controller/competition'
+require './lib/controller/image'
+require './lib/util/logger'
 
-logger = ::VolgaCTF::Final::Utils::Logger.get
+logger = ::VolgaCTF::Final::Util::Logger.get
 
 config_redis = {
   url: "redis://#{::ENV['REDIS_HOST']}:#{::ENV['REDIS_PORT']}/#{::ENV['VOLGACTF_FINAL_QUEUE_REDIS_DB']}"
@@ -29,7 +29,7 @@ end
 
   config.on(:startup) do
     logger.info "Starting queue process, instance #{::ENV['QUEUE_INSTANCE']}"
-    ::VolgaCTF::Final::Models.init
+    ::VolgaCTF::Final::Model.init
   end
   config.on(:quiet) do
     logger.info 'Got USR1, stopping further job processing...'
@@ -52,7 +52,7 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
             if competition_ctrl.can_trigger_round?
               ::VolgaCTF::Final::Queue::Tasks::TriggerRound.perform_async
             end
@@ -80,7 +80,7 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
             competition_ctrl.trigger_round
           end
         end
@@ -90,7 +90,7 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
             competition_ctrl.trigger_poll
           end
         end
@@ -100,7 +100,7 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
             competition_ctrl.trigger_recalculate
           end
         end
@@ -110,7 +110,7 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
             competition_ctrl.pause
           end
         end
@@ -120,7 +120,7 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform
-            competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+            competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
             competition_ctrl.finish
           end
         end
@@ -130,9 +130,9 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform(flag_str)
-            flag = ::VolgaCTF::Final::Models::Flag.first(flag: flag_str)
+            flag = ::VolgaCTF::Final::Model::Flag.first(flag: flag_str)
             unless flag.nil?
-              competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
+              competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
               competition_ctrl.pull_flag(flag)
             end
           end
@@ -143,9 +143,9 @@ module VolgaCTF
           sidekiq_options :retry => false
 
           def perform(path, team_id)
-            team = ::VolgaCTF::Final::Models::Team[team_id]
+            team = ::VolgaCTF::Final::Model::Team[team_id]
             return if team.nil?
-            image_ctrl = ::VolgaCTF::Final::Controllers::Image.new
+            image_ctrl = ::VolgaCTF::Final::Controller::Image.new
             image_ctrl.resize(path, team)
           end
         end

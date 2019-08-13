@@ -6,22 +6,22 @@ require 'date'
 require 'tempfile'
 require 'mini_magick'
 
-require './lib/controllers/attack'
-require './lib/utils/event_emitter'
-require './lib/utils/tempfile_monkey_patch'
+require './lib/controller/attack'
+require './lib/util/event_emitter'
+require './lib/util/tempfile_monkey_patch'
 require './lib/server/rack_monkey_patch'
-require './lib/models/bootstrap'
-require './lib/controllers/ctftime'
-require './lib/constants/submit_result'
-require './lib/constants/service_status'
+require './lib/model/bootstrap'
+require './lib/controller/ctftime'
+require './lib/const/submit_result'
+require './lib/const/service_status'
 
-require './lib/controllers/identity'
-require './lib/controllers/competition'
-require './lib/controllers/competition_stage'
-require './lib/controllers/scoreboard'
-require './lib/controllers/image'
-require './lib/controllers/score'
-require './lib/controllers/team_service_state'
+require './lib/controller/identity'
+require './lib/controller/competition'
+require './lib/controller/competition_stage'
+require './lib/controller/scoreboard'
+require './lib/controller/image'
+require './lib/controller/score'
+require './lib/controller/team_service_state'
 
 module VolgaCTF
   module Final
@@ -30,15 +30,15 @@ module VolgaCTF
         def initialize(app = nil)
           super(app)
 
-          @identity_ctrl = ::VolgaCTF::Final::Controllers::Identity.new
-          @ctftime_ctrl = ::VolgaCTF::Final::Controllers::CTFTime.new
-          @competition_stage_ctrl = ::VolgaCTF::Final::Controllers::CompetitionStage.new
-          @competition_ctrl = ::VolgaCTF::Final::Controllers::Competition.new
-          @attack_ctrl = ::VolgaCTF::Final::Controllers::Attack.new
-          @scoreboard_ctrl = ::VolgaCTF::Final::Controllers::Scoreboard.new
-          @image_ctrl = ::VolgaCTF::Final::Controllers::Image.new
-          @score_ctrl = ::VolgaCTF::Final::Controllers::Score.new
-          @team_service_state_ctrl = ::VolgaCTF::Final::Controllers::TeamServiceState.new
+          @identity_ctrl = ::VolgaCTF::Final::Controller::Identity.new
+          @ctftime_ctrl = ::VolgaCTF::Final::Controller::CTFTime.new
+          @competition_stage_ctrl = ::VolgaCTF::Final::Controller::CompetitionStage.new
+          @competition_ctrl = ::VolgaCTF::Final::Controller::Competition.new
+          @attack_ctrl = ::VolgaCTF::Final::Controller::Attack.new
+          @scoreboard_ctrl = ::VolgaCTF::Final::Controller::Scoreboard.new
+          @image_ctrl = ::VolgaCTF::Final::Controller::Image.new
+          @score_ctrl = ::VolgaCTF::Final::Controller::Score.new
+          @team_service_state_ctrl = ::VolgaCTF::Final::Controller::TeamServiceState.new
 
           ::MiniMagick.configure do |config|
             config.cli = :graphicsmagick
@@ -46,7 +46,7 @@ module VolgaCTF
         end
 
         configure do
-          ::VolgaCTF::Final::Models.init
+          ::VolgaCTF::Final::Model.init
         end
 
         configure :production, :development do
@@ -79,7 +79,7 @@ module VolgaCTF
         end
 
         get '/api/competition/round' do
-          round = ::VolgaCTF::Final::Models::Round.count
+          round = ::VolgaCTF::Final::Model::Round.count
           json(value: (round == 0) ? nil : round)
         end
 
@@ -96,9 +96,9 @@ module VolgaCTF
             end
 
           if muted
-            obj = ::VolgaCTF::Final::Models::ScoreboardHistoryPosition.last
+            obj = ::VolgaCTF::Final::Model::ScoreboardHistoryPosition.last
           else
-            obj = ::VolgaCTF::Final::Models::ScoreboardPosition.last
+            obj = ::VolgaCTF::Final::Model::ScoreboardPosition.last
           end
 
           json(
@@ -116,9 +116,9 @@ module VolgaCTF
             end
 
           if muted
-            obj = ::VolgaCTF::Final::Models::ScoreboardHistoryPosition.last
+            obj = ::VolgaCTF::Final::Model::ScoreboardHistoryPosition.last
           else
-            obj = ::VolgaCTF::Final::Models::ScoreboardPosition.last
+            obj = ::VolgaCTF::Final::Model::ScoreboardPosition.last
           end
 
           json(
@@ -127,15 +127,15 @@ module VolgaCTF
         end
 
         get '/api/teams' do
-          json ::VolgaCTF::Final::Models::Team.map { |t| t.serialize }
+          json ::VolgaCTF::Final::Model::Team.map { |t| t.serialize }
         end
 
         get '/api/services' do
-          json ::VolgaCTF::Final::Models::Service.enabled.map { |s| s.serialize }
+          json ::VolgaCTF::Final::Model::Service.enabled.map { |s| s.serialize }
         end
 
         get '/api/posts' do
-          json ::VolgaCTF::Final::Models::Post.map { |post|
+          json ::VolgaCTF::Final::Model::Post.map { |post|
             {
               id: post.id,
               title: post.title,
@@ -169,15 +169,15 @@ module VolgaCTF
           end
 
           begin
-            ::VolgaCTF::Final::Models::DB.transaction do
-              post = ::VolgaCTF::Final::Models::Post.create(
+            ::VolgaCTF::Final::Model::DB.transaction do
+              post = ::VolgaCTF::Final::Model::Post.create(
                 title: payload['title'],
                 description: payload['description'],
                 created_at: ::DateTime.now,
                 updated_at: ::DateTime.now
               )
 
-              ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
+              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
                 'posts/add',
                 id: post.id,
                 title: post.title,
@@ -200,13 +200,13 @@ module VolgaCTF
           end
 
           post_id = post_id_str.to_i
-          post = ::VolgaCTF::Final::Models::Post[post_id]
+          post = ::VolgaCTF::Final::Model::Post[post_id]
           halt 404 if post.nil?
 
-          ::VolgaCTF::Final::Models::DB.transaction do
+          ::VolgaCTF::Final::Model::DB.transaction do
             post.destroy
 
-            ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
+            ::VolgaCTF::Final::Util::EventEmitter.broadcast(
               'posts/remove',
               id: post_id
             )
@@ -239,17 +239,17 @@ module VolgaCTF
           end
 
           post_id = post_id_str.to_i
-          post = ::VolgaCTF::Final::Models::Post[post_id]
+          post = ::VolgaCTF::Final::Model::Post[post_id]
           halt 404 if post.nil?
 
           begin
-            ::VolgaCTF::Final::Models::DB.transaction do
+            ::VolgaCTF::Final::Model::DB.transaction do
               post.title = payload['title']
               post.description = payload['description']
               post.updated_at = ::DateTime.now
               post.save
 
-              ::VolgaCTF::Final::Utils::EventEmitter.broadcast(
+              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
                 'posts/edit',
                 id: post.id,
                 title: post.title,
@@ -306,7 +306,7 @@ module VolgaCTF
           end
 
           team_id = team_id_str.to_i
-          team = ::VolgaCTF::Final::Models::Team[team_id]
+          team = ::VolgaCTF::Final::Model::Team[team_id]
           halt 404 if team.nil?
 
           json @score_ctrl.get_team_scores(team).map { |s| s.serialize }
@@ -338,7 +338,7 @@ module VolgaCTF
             identity = { name: 'external' }
           end
 
-          json ::VolgaCTF::Final::Models::TeamServicePushState.map { |team_service_state|
+          json ::VolgaCTF::Final::Model::TeamServicePushState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,
@@ -366,7 +366,7 @@ module VolgaCTF
             identity = { name: 'external' }
           end
 
-          json ::VolgaCTF::Final::Models::TeamServicePullState.map { |team_service_state|
+          json ::VolgaCTF::Final::Model::TeamServicePullState.map { |team_service_state|
             {
               id: team_service_state.id,
               team_id: team_service_state.team_id,
@@ -380,7 +380,7 @@ module VolgaCTF
 
         get %r{^/api/team/logo/(\d{1,2})\.png$} do |team_id_str|
           team_id = team_id_str.to_i
-          team = ::VolgaCTF::Final::Models::Team[team_id]
+          team = ::VolgaCTF::Final::Model::Team[team_id]
           halt 404 if team.nil?
 
           filename = ::File.join(::ENV['VOLGACTF_FINAL_TEAM_LOGO_DIR'], "#{team.alias}.png")
@@ -392,7 +392,7 @@ module VolgaCTF
         end
 
         get '/api/service/v1/list' do
-          json ::VolgaCTF::Final::Models::Service.enabled.map { |service|
+          json ::VolgaCTF::Final::Model::Service.enabled.map { |service|
             {
               id: service.id,
               name: service.name
@@ -409,16 +409,16 @@ module VolgaCTF
           end
 
           service_id = service_id_str.to_i
-          service = ::VolgaCTF::Final::Models::Service[service_id]
+          service = ::VolgaCTF::Final::Model::Service[service_id]
           halt 404 if service.nil? || !service.enabled
 
           stage = @competition_stage_ctrl.current
           r = if @team_service_state_ctrl.up?(stage, team, service)
-            ::VolgaCTF::Final::Constants::ServiceStatus::UP
+            ::VolgaCTF::Final::Const::ServiceStatus::UP
           else
-            ::VolgaCTF::Final::Constants::ServiceStatus::NOT_UP
+            ::VolgaCTF::Final::Const::ServiceStatus::NOT_UP
           end
-          ::VolgaCTF::Final::Constants::ServiceStatus.key(r).to_s
+          ::VolgaCTF::Final::Const::ServiceStatus.key(r).to_s
         end
 
         get '/api/capsule/v1/public_key' do
@@ -429,15 +429,15 @@ module VolgaCTF
         post '/api/flag/v1/submit' do
           content_type :text
           unless request.content_type == 'text/plain'
-            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
-              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
+            halt 400, ::VolgaCTF::Final::Const::SubmitResult.key(
+              ::VolgaCTF::Final::Const::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
           team = @identity_ctrl.get_team(@remote_ip)
 
           if team.nil?
-            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
-              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_ACCESS_DENIED).to_s
+            halt 400, ::VolgaCTF::Final::Const::SubmitResult.key(
+              ::VolgaCTF::Final::Const::SubmitResult::ERROR_ACCESS_DENIED).to_s
           end
 
           payload = nil
@@ -446,32 +446,32 @@ module VolgaCTF
             request.body.rewind
             flag_str = request.body.read
           rescue => e
-            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
-              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_FLAG_INVALID).to_s
+            halt 400, ::VolgaCTF::Final::Const::SubmitResult.key(
+              ::VolgaCTF::Final::Const::SubmitResult::ERROR_FLAG_INVALID).to_s
           end
 
           stage = @competition_stage_ctrl.current
           if stage.not_started? || stage.starting?
-            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
-              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_COMPETITION_NOT_STARTED).to_s
+            halt 400, ::VolgaCTF::Final::Const::SubmitResult.key(
+              ::VolgaCTF::Final::Const::SubmitResult::ERROR_COMPETITION_NOT_STARTED).to_s
           end
 
           if stage.paused?
-            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
-              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_COMPETITION_PAUSED).to_s
+            halt 400, ::VolgaCTF::Final::Const::SubmitResult.key(
+              ::VolgaCTF::Final::Const::SubmitResult::ERROR_COMPETITION_PAUSED).to_s
           end
 
           if stage.finished?
-            halt 400, ::VolgaCTF::Final::Constants::SubmitResult.key(
-              ::VolgaCTF::Final::Constants::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
+            halt 400, ::VolgaCTF::Final::Const::SubmitResult.key(
+              ::VolgaCTF::Final::Const::SubmitResult::ERROR_COMPETITION_FINISHED).to_s
           end
 
           r = @attack_ctrl.handle(stage, team, flag_str)
-          ::VolgaCTF::Final::Constants::SubmitResult.key(r).to_s
+          ::VolgaCTF::Final::Const::SubmitResult.key(r).to_s
         end
 
         get %r{^/api/flag/v1/info/([\da-f]{32}=)$} do |flag_str|
-          flag_obj = ::VolgaCTF::Final::Models::Flag.exclude(
+          flag_obj = ::VolgaCTF::Final::Model::Flag.exclude(
             pushed_at: nil
           ).where(
             flag: flag_str
@@ -506,7 +506,7 @@ module VolgaCTF
           end
 
           begin
-            flag = ::VolgaCTF::Final::Models::Flag.first(
+            flag = ::VolgaCTF::Final::Model::Flag.first(
               flag: payload['flag']
             )
             if flag.nil?
@@ -542,7 +542,7 @@ module VolgaCTF
           end
 
           begin
-            poll = ::VolgaCTF::Final::Models::FlagPoll.first(
+            poll = ::VolgaCTF::Final::Model::FlagPoll.first(
               id: payload['request_id']
             )
             if poll.nil?

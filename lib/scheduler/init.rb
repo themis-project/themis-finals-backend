@@ -1,13 +1,13 @@
 require 'eventmachine'
 
-require './lib/utils/logger'
+require './lib/util/logger'
 require './lib/queue/tasks'
 
 module VolgaCTF
   module Final
     class Scheduler
       def initialize
-        @logger = ::VolgaCTF::Final::Utils::Logger.get
+        @logger = ::VolgaCTF::Final::Util::Logger.get
       end
 
       def run
