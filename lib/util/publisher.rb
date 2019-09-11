@@ -1,5 +1,4 @@
 require 'redis'
-require 'hiredis'
 require './lib/util/logger'
 
 # TODO: Deal with Redis::ConnectionError exception
