@@ -3,12 +3,10 @@ require 'sinatra/json'
 require 'json'
 require 'ip'
 require 'date'
-require 'tempfile'
 require 'mini_magick'
 
 require './lib/controller/attack'
 require './lib/util/event_emitter'
-require './lib/util/tempfile_monkey_patch'
 require './lib/util/rack_monkey_patch'
 require './lib/model/bootstrap'
 require './lib/controller/ctftime'
@@ -115,41 +113,6 @@ module VolgaCTF
           json ::VolgaCTF::Final::Model::Service.enabled.map { |s| s.serialize }
         end
 
-
-        post '/api/team/logo' do
-          team = @identity_ctrl.get_team(@remote_ip)
-
-          if team.nil?
-            halt 401, 'Unauthorized'
-          end
-
-          unless params[:file]
-            halt 400, 'No file'
-          end
-
-          path = nil
-          upload = params[:file][:tempfile]
-          extension = ::File.extname(params[:file][:filename])
-          t = Tempfile.open(['logo', extension], ::ENV['VOLGACTF_FINAL_UPLOAD_DIR']) do |f|
-            f.write(upload.read)
-            path = f.path
-            f.persist  # introduced by a monkey patch
-          end
-
-          image = @image_ctrl.load(path)
-          if image.nil?
-            halt 400, 'Error processing image'
-          end
-
-          if image.width != image.height
-            halt 400, 'Image width must equal its height'
-          end
-
-          @image_ctrl.perform_resize(path, team.id)
-          status 201
-          body 'OK'
-        end
-
         get %r{^/api/team/(\d{1,2})/stats$} do |team_id_str|
           unless @identity_ctrl.is_internal?(@remote_ip)
             halt 401
@@ -226,19 +189,6 @@ module VolgaCTF
               updated_at: team_service_state.updated_at.iso8601
             }
           }
-        end
-
-        get %r{^/api/team/logo/(\d{1,2})\.png$} do |team_id_str|
-          team_id = team_id_str.to_i
-          team = ::VolgaCTF::Final::Model::Team[team_id]
-          halt 404 if team.nil?
-
-          filename = ::File.join(::ENV['VOLGACTF_FINAL_TEAM_LOGO_DIR'], "#{team.alias}.png")
-          unless ::File.exist?(filename)
-            filename = ::File.join(::Dir.pwd, 'logo', 'default.png')
-          end
-
-          send_file filename
         end
 
         get '/api/service/v1/list' do
@@ -414,3 +364,4 @@ end
 require './lib/route/public_capsule'
 require './lib/route/public_ctftime'
 require './lib/route/notification'
+require './lib/route/team_logo'
