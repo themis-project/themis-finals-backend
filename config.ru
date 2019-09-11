@@ -1,3 +1,3 @@
-require './lib/server/application'
+require './lib/server'
 
 run ::VolgaCTF::Final::Server::Application

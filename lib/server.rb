@@ -9,7 +9,7 @@ require 'mini_magick'
 require './lib/controller/attack'
 require './lib/util/event_emitter'
 require './lib/util/tempfile_monkey_patch'
-require './lib/server/rack_monkey_patch'
+require './lib/util/rack_monkey_patch'
 require './lib/model/bootstrap'
 require './lib/controller/ctftime'
 require './lib/const/submit_result'
@@ -107,25 +107,6 @@ module VolgaCTF
           )
         end
 
-        get '/api/third-party/ctftime' do
-          muted = \
-            if @identity_ctrl.is_internal?(@remote_ip)
-              false
-            else
-              !@scoreboard_ctrl.broadcast?
-            end
-
-          if muted
-            obj = ::VolgaCTF::Final::Model::ScoreboardHistoryPosition.last
-          else
-            obj = ::VolgaCTF::Final::Model::ScoreboardPosition.last
-          end
-
-          json(
-            standings: obj.nil? ? [] : @ctftime_ctrl.format_positions(obj.data)
-          )
-        end
-
         get '/api/teams' do
           json ::VolgaCTF::Final::Model::Team.map { |t| t.serialize }
         end
@@ -134,137 +115,6 @@ module VolgaCTF
           json ::VolgaCTF::Final::Model::Service.enabled.map { |s| s.serialize }
         end
 
-        get '/api/posts' do
-          json ::VolgaCTF::Final::Model::Post.map { |post|
-            {
-              id: post.id,
-              title: post.title,
-              description: post.description,
-              created_at: post.created_at.iso8601,
-              updated_at: post.updated_at.iso8601
-            }
-          }
-        end
-
-        post '/api/post' do
-          unless request.content_type == 'application/json'
-            halt 400
-          end
-
-          unless @identity_ctrl.is_internal?(@remote_ip)
-            halt 400
-          end
-
-          payload = nil
-
-          begin
-            request.body.rewind
-            payload = ::JSON.parse(request.body.read)
-          rescue => e
-            halt 400
-          end
-
-          unless payload.key?('title') && payload.key?('description')
-            halt 400
-          end
-
-          begin
-            ::VolgaCTF::Final::Model::DB.transaction do
-              post = ::VolgaCTF::Final::Model::Post.create(
-                title: payload['title'],
-                description: payload['description'],
-                created_at: ::DateTime.now,
-                updated_at: ::DateTime.now
-              )
-
-              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
-                'posts/add',
-                id: post.id,
-                title: post.title,
-                description: post.description,
-                created_at: post.created_at.iso8601,
-                updated_at: post.updated_at.iso8601
-              )
-            end
-          rescue => e
-            halt 400
-          end
-
-          status 201
-          body ''
-        end
-
-        delete %r{^/api/post/(\d+)$} do |post_id_str|
-          unless @identity_ctrl.is_internal?(@remote_ip)
-            halt 400
-          end
-
-          post_id = post_id_str.to_i
-          post = ::VolgaCTF::Final::Model::Post[post_id]
-          halt 404 if post.nil?
-
-          ::VolgaCTF::Final::Model::DB.transaction do
-            post.destroy
-
-            ::VolgaCTF::Final::Util::EventEmitter.broadcast(
-              'posts/remove',
-              id: post_id
-            )
-          end
-
-          status 204
-          body ''
-        end
-
-        put %r{^/api/post/(\d+)$} do |post_id_str|
-          unless request.content_type == 'application/json'
-            halt 400
-          end
-
-          unless @identity_ctrl.is_internal?(@remote_ip)
-            halt 400
-          end
-
-          payload = nil
-
-          begin
-            request.body.rewind
-            payload = ::JSON.parse(request.body.read)
-          rescue => e
-            halt 400
-          end
-
-          unless payload.key?('title') && payload.key?('description')
-            halt 400
-          end
-
-          post_id = post_id_str.to_i
-          post = ::VolgaCTF::Final::Model::Post[post_id]
-          halt 404 if post.nil?
-
-          begin
-            ::VolgaCTF::Final::Model::DB.transaction do
-              post.title = payload['title']
-              post.description = payload['description']
-              post.updated_at = ::DateTime.now
-              post.save
-
-              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
-                'posts/edit',
-                id: post.id,
-                title: post.title,
-                description: post.description,
-                created_at: post.created_at.iso8601,
-                updated_at: post.updated_at.iso8601
-              )
-            end
-          rescue => e
-            halt 400
-          end
-
-          status 204
-          body ''
-        end
 
         post '/api/team/logo' do
           team = @identity_ctrl.get_team(@remote_ip)
@@ -421,11 +271,6 @@ module VolgaCTF
           ::VolgaCTF::Final::Const::ServiceStatus.key(r).to_s
         end
 
-        get '/api/capsule/v1/public_key' do
-          content_type :text
-          ::ENV.fetch('VOLGACTF_FINAL_FLAG_SIGN_KEY_PUBLIC', '').gsub('\n', "\n")
-        end
-
         post '/api/flag/v1/submit' do
           content_type :text
           unless request.content_type == 'text/plain'
@@ -565,3 +410,7 @@ module VolgaCTF
     end
   end
 end
+
+require './lib/route/public_capsule'
+require './lib/route/public_ctftime'
+require './lib/route/notification'
