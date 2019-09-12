@@ -9,19 +9,22 @@ module VolgaCTF
   module Final
     module Server
       class Application < ::Sinatra::Base
-        get '/api/posts' do
-          json ::VolgaCTF::Final::Model::Post.map { |post|
-            {
-              id: post.id,
-              title: post.title,
-              description: post.description,
-              created_at: post.created_at.iso8601,
-              updated_at: post.updated_at.iso8601
-            }
-          }
+        get '/api/notifications' do
+          identity_team = @identity_ctrl.get_team(@remote_ip)
+          if identity_team.nil?
+            if @identity_ctrl.is_internal?(@remote_ip)
+              q = ::VolgaCTF::Final::Model::Notification.for_admin
+            else
+              q = ::VolgaCTF::Final::Model::Notification.for_guest
+            end
+          else
+            q = ::VolgaCTF::Final::Model::Notification.for_team(identity_team)
+          end
+
+          json(q.map { |n| n.serialize })
         end
 
-        post '/api/post' do
+        post '/api/notification' do
           unless request.content_type == 'application/json'
             halt 400
           end
@@ -39,59 +42,87 @@ module VolgaCTF
             halt 400
           end
 
+          recipient_id = nil
+          if payload.key?('team_id') && !payload['team_id'].nil?
+            team = ::VolgaCTF::Final::Model::Team[payload['team_id']]
+            halt 400 if team.nil?
+            recipient_id = team.id
+          end
+
           unless payload.key?('title') && payload.key?('description')
             halt 400
           end
 
           begin
             ::VolgaCTF::Final::Model::DB.transaction do
-              post = ::VolgaCTF::Final::Model::Post.create(
+              notification = ::VolgaCTF::Final::Model::Notification.create(
                 title: payload['title'],
                 description: payload['description'],
+                team_id: recipient_id,
                 created_at: ::DateTime.now,
                 updated_at: ::DateTime.now
               )
 
-              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
-                'posts/add',
-                id: post.id,
-                title: post.title,
-                description: post.description,
-                created_at: post.created_at.iso8601,
-                updated_at: post.updated_at.iso8601
-              )
+              event_data = notification.serialize
+              if recipient_id.nil?
+                ::VolgaCTF::Final::Util::EventEmitter.broadcast(
+                  'notification/add',
+                  event_data
+                )
+              else
+                ::VolgaCTF::Final::Util::EventEmitter.emit(
+                  'notification/add',
+                  event_data,
+                  nil,
+                  nil,
+                  ::Hash[recipient_id, event_data]
+                )
+              end
             end
           rescue => e
             halt 400
           end
 
           status 201
+          headers 'Location' => '/api/notifications'
           body ''
         end
 
-        delete %r{^/api/post/(\d+)$} do |post_id_str|
+        delete %r{^/api/notification/(\d+)$} do |id|
           unless @identity_ctrl.is_internal?(@remote_ip)
             halt 400
           end
 
-          post_id = post_id_str.to_i
-          post = ::VolgaCTF::Final::Model::Post[post_id]
-          halt 404 if post.nil?
+          id = id.to_i
+          notification = ::VolgaCTF::Final::Model::Notification[id]
+          halt 404 if notification.nil?
+          recipient_id = notification.team_id
 
           ::VolgaCTF::Final::Model::DB.transaction do
-            post.destroy
+            notification.destroy
 
-            ::VolgaCTF::Final::Util::EventEmitter.broadcast(
-              'posts/remove',
-              id: post_id
-            )
+            event_data = { id: id }
+            if recipient_id.nil?
+              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
+                'notification/remove',
+                event_data
+              )
+            else
+              ::VolgaCTF::Final::Util::EventEmitter.emit(
+                'notification/remove',
+                event_data,
+                nil,
+                nil,
+                ::Hash[recipient_id, event_data]
+              )
+            end
           end
 
           status 204
           body ''
         end
 
-        put %r{^/api/post/(\d+)$} do |post_id_str|
+        patch %r{^/api/notification/(\d+)$} do |id|
           unless request.content_type == 'application/json'
             halt 400
           end
@@ -113,25 +144,33 @@ module VolgaCTF
             halt 400
           end
 
-          post_id = post_id_str.to_i
-          post = ::VolgaCTF::Final::Model::Post[post_id]
-          halt 404 if post.nil?
+          id = id.to_i
+          notification = ::VolgaCTF::Final::Model::Notification[id]
+          halt 404 if notification.nil?
+          recipient_id = notification.team_id
 
           begin
             ::VolgaCTF::Final::Model::DB.transaction do
-              post.title = payload['title']
-              post.description = payload['description']
-              post.updated_at = ::DateTime.now
-              post.save
+              notification.title = payload['title']
+              notification.description = payload['description']
+              notification.updated_at = ::DateTime.now
+              notification.save
 
-              ::VolgaCTF::Final::Util::EventEmitter.broadcast(
-                'posts/edit',
-                id: post.id,
-                title: post.title,
-                description: post.description,
-                created_at: post.created_at.iso8601,
-                updated_at: post.updated_at.iso8601
-              )
+              event_data = notification.serialize
+              if recipient_id.nil?
+                ::VolgaCTF::Final::Util::EventEmitter.broadcast(
+                  'notification/alter',
+                  event_data
+                )
+              else
+                ::VolgaCTF::Final::Util::EventEmitter.emit(
+                  'notification/alter',
+                  event_data,
+                  nil,
+                  nil,
+                  ::Hash[recipient_id, event_data]
+                )
+              end
             end
           rescue => e
             halt 400

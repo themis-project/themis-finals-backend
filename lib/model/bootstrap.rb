@@ -23,7 +23,7 @@ module VolgaCTF
       require './lib/model/scoreboard_state'
       require './lib/model/competition_stage'
       require './lib/model/server_sent_event'
-      require './lib/model/post'
+      require './lib/model/notification'
       require './lib/model/round'
       require './lib/model/total_score'
       require './lib/model/team_service_push_history_state'

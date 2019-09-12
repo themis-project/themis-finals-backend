@@ -18,32 +18,7 @@ namespace :db do
     }
 
     ::Sequel.connect(connection_params) do |db|
-      %w(
-        configurations
-        scoreboard_positions
-        scoreboard_history_positions
-        server_sent_events
-        competition_stages
-        posts
-        scoreboard_states
-        attack_attempts
-        attacks
-        total_scores
-        scores
-        team_service_push_history_states
-        team_service_push_states
-        team_service_pull_history_states
-        team_service_pull_states
-        flag_polls
-        flags
-        polls
-        rounds
-        services
-        teams
-        schema_info
-      ).each do |table|
-        db.run "DROP TABLE IF EXISTS #{table}"
-      end
+      db.run 'DROP OWNED BY CURRENT_USER'
     end
 
     ::Sequel.extension :migration
