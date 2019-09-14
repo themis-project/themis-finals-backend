@@ -39,6 +39,7 @@ module VolgaCTF
       require './lib/model/scoreboard_history_position'
       require './lib/model/poll'
       require './lib/model/configuration'
+      require './lib/model/notification_read_item'
 
       def self.init
       end

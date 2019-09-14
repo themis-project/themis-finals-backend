@@ -99,6 +99,7 @@ module VolgaCTF
           recipient_id = notification.team_id
 
           ::VolgaCTF::Final::Model::DB.transaction do
+            ::VolgaCTF::Final::Model::NotificationReadItem.for_notification(id).delete
             notification.destroy
 
             event_data = { id: id }
@@ -151,6 +152,7 @@ module VolgaCTF
 
           begin
             ::VolgaCTF::Final::Model::DB.transaction do
+              ::VolgaCTF::Final::Model::NotificationReadItem.for_notification(id).delete
               notification.title = payload['title']
               notification.description = payload['description']
               notification.updated_at = ::DateTime.now
@@ -177,6 +179,47 @@ module VolgaCTF
           end
 
           status 204
+          body ''
+        end
+
+        get '/api/notification/status' do
+          identity_team = @identity_ctrl.get_team(@remote_ip)
+          if identity_team.nil?
+            if @identity_ctrl.is_internal?(@remote_ip)
+              q = ::VolgaCTF::Final::Model::Notification.for_admin
+            else
+              halt 400
+            end
+          else
+            q = ::VolgaCTF::Final::Model::Notification.for_team(identity_team)
+          end
+
+          json(
+            total: q.count,
+            read: ::VolgaCTF::Final::Model::NotificationReadItem.for_addr(@remote_ip).map { |x| x.notification_id }
+          )
+        end
+
+        post %r{/api/notification/(\d+)/read} do |id|
+          identity_team = @identity_ctrl.get_team(@remote_ip)
+          if identity_team.nil?
+            halt 400 unless @identity_ctrl.is_internal?(@remote_ip)
+          end
+
+          id = id.to_i
+          notification = ::VolgaCTF::Final::Model::Notification[id]
+          halt 404 if notification.nil?
+
+          begin
+            ::VolgaCTF::Final::Model::DB.transaction do
+              ::VolgaCTF::Final::Model::NotificationReadItem.create(
+                addr: @remote_ip.to_s,
+                notification_id: notification.id
+              )
+            end
+          rescue ::Sequel::UniqueConstraintViolation => e
+          end
+
           body ''
         end
       end
