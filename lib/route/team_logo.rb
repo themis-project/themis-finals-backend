@@ -8,7 +8,7 @@ module VolgaCTF
   module Final
     module Server
       class Application < ::Sinatra::Base
-        get %r{^/api/team/logo/(\d{1,2})\.png$} do |team_id_str|
+        get %r{/api/team/logo/(\d{1,2})\.png} do |team_id_str|
           team_id = team_id_str.to_i
           team = ::VolgaCTF::Final::Model::Team[team_id]
           halt 404 if team.nil?

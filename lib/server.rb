@@ -25,6 +25,12 @@ module VolgaCTF
   module Final
     module Server
       class Application < ::Sinatra::Base
+        disable :run
+        disable :method_override
+        disable :static
+
+        set :environment, ::ENV['APP_ENV']
+
         def initialize(app = nil)
           super(app)
 
@@ -50,8 +56,6 @@ module VolgaCTF
         configure :production, :development do
           enable :logging
         end
-
-        disable :run
 
         before do
           @remote_ip = ::IP.new(request.ip)
@@ -113,7 +117,7 @@ module VolgaCTF
           json ::VolgaCTF::Final::Model::Service.enabled.map { |s| s.serialize }
         end
 
-        get %r{^/api/team/(\d{1,2})/stats$} do |team_id_str|
+        get %r{/api/team/(\d{1,2})/stats} do |team_id_str|
           unless @identity_ctrl.is_internal?(@remote_ip)
             halt 401
           end
@@ -191,36 +195,6 @@ module VolgaCTF
           }
         end
 
-        get '/api/service/v1/list' do
-          json ::VolgaCTF::Final::Model::Service.enabled.map { |service|
-            {
-              id: service.id,
-              name: service.name
-            }
-          }
-        end
-
-        get %r{^/api/service/v1/status/(\d{1,2})$} do |service_id_str|
-          content_type :text
-
-          team = @identity_ctrl.get_team(@remote_ip)
-          if team.nil?
-            halt 403
-          end
-
-          service_id = service_id_str.to_i
-          service = ::VolgaCTF::Final::Model::Service[service_id]
-          halt 404 if service.nil? || !service.enabled
-
-          stage = @competition_stage_ctrl.current
-          r = if @team_service_state_ctrl.up?(stage, team, service)
-            ::VolgaCTF::Final::Const::ServiceStatus::UP
-          else
-            ::VolgaCTF::Final::Const::ServiceStatus::NOT_UP
-          end
-          ::VolgaCTF::Final::Const::ServiceStatus.key(r).to_s
-        end
-
         post '/api/flag/v1/submit' do
           content_type :text
           unless request.content_type == 'text/plain'
@@ -265,7 +239,7 @@ module VolgaCTF
           ::VolgaCTF::Final::Const::SubmitResult.key(r).to_s
         end
 
-        get %r{^/api/flag/v1/info/([\da-f]{32}=)$} do |flag_str|
+        get %r{/api/flag/v1/info/([\da-f]{32}=)} do |flag_str|
           flag_obj = ::VolgaCTF::Final::Model::Flag.exclude(
             pushed_at: nil
           ).where(
@@ -363,5 +337,6 @@ end
 
 require './lib/route/public_capsule'
 require './lib/route/public_ctftime'
+require './lib/route/public_service'
 require './lib/route/notification'
 require './lib/route/team_logo'

@@ -88,7 +88,7 @@ module VolgaCTF
           body ''
         end
 
-        delete %r{^/api/notification/(\d+)$} do |id|
+        delete %r{/api/notification/(\d+)} do |id|
           unless @identity_ctrl.is_internal?(@remote_ip)
             halt 400
           end
@@ -122,7 +122,7 @@ module VolgaCTF
           body ''
         end
 
-        patch %r{^/api/notification/(\d+)$} do |id|
+        patch %r{/api/notification/(\d+)} do |id|
           unless request.content_type == 'application/json'
             halt 400
           end
