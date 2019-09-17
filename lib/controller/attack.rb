@@ -95,6 +95,19 @@ module VolgaCTF
                   service_award_defence_after: flag.service.award_defence_after
                 )
 
+                notification = ::VolgaCTF::Final::Model::Notification.create(
+                  title: "First blood on #{flag.service.name}!",
+                  description: ":tada: Congratulations to **#{team.name}**!  \nDefence points will be awarded after the end of the round #{flag.service.award_defence_after}.",
+                  team_id: nil,
+                  created_at: ::DateTime.now,
+                  updated_at: ::DateTime.now
+                )
+
+                event_data = notification.serialize
+                ::VolgaCTF::Final::Util::EventEmitter.broadcast(
+                  'notification/add',
+                  event_data
+                )
               end
 
               r = ::VolgaCTF::Final::Const::SubmitResult::SUCCESS
