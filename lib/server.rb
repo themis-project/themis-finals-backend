@@ -117,6 +117,14 @@ module VolgaCTF
           json ::VolgaCTF::Final::Model::Service.enabled.map { |s| s.serialize }
         end
 
+        get '/api/service/index' do
+          unless @identity_ctrl.is_internal?(@remote_ip)
+            halt 401
+          end
+
+          json ::VolgaCTF::Final::Model::Service.map { |s| s.serialize }
+        end
+
         get %r{/api/team/(\d{1,2})/stats} do |team_id_str|
           unless @identity_ctrl.is_internal?(@remote_ip)
             halt 401
