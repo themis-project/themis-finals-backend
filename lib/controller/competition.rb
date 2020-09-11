@@ -217,6 +217,10 @@ module VolgaCTF
           end
         end
 
+        def team_service_endpoint(team, service)
+          ::IP.new(eval(service.vulnbox_endpoint_code % { team_network: team.network }))
+        end
+
         def pull_flag(flag)
           team = flag.team
           service = flag.service
@@ -229,11 +233,10 @@ module VolgaCTF
             ::VolgaCTF::Final::Model::DB.after_commit do
               @logger.info("Pulling flag `#{flag.flag}` from service "\
                            "`#{service.name}` of `#{team.name}` ...")
-              endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
               job_data = {
                 params: {
                   request_id: flag_poll.id,
-                  endpoint: endpoint_addr.to_s,
+                  endpoint: team_service_endpoint(team, service).to_s,
                   capsule: flag.capsule,
                   label: flag.label
                 },
@@ -263,10 +266,9 @@ module VolgaCTF
             ::VolgaCTF::Final::Model::DB.after_commit do
               @logger.info("Pushing flag `#{flag.flag}` to service "\
                            "`#{service.name}` of `#{team.name}` ...")
-              endpoint_addr = ::IP.new(team.network).to_range.first | ::IP.new(service.hostmask)
               job_data = {
                 params: {
-                  endpoint: endpoint_addr.to_s,
+                  endpoint: team_service_endpoint(team, service).to_s,
                   capsule: flag.capsule,
                   label: flag.label
                 },

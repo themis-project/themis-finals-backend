@@ -139,7 +139,7 @@ module VolgaCTF
           ::VolgaCTF::Final::Model::Service.create(
             name: opts.name,
             alias: opts.alias,
-            hostmask: opts.hostmask,
+            vulnbox_endpoint_code: opts.vulnbox_endpoint_code,
             checker_endpoint: opts.checker_endpoint,
             attack_priority: opts.attack_priority,
             award_defence_after: nil,

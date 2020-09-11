@@ -12,13 +12,14 @@ module VolgaCTF
       end
 
       class Service
-        attr_accessor :alias, :name, :hostmask, :checker_endpoint, :attack_priority,
+        attr_accessor :alias, :name, :vulnbox_endpoint_code,
+                      :checker_endpoint, :attack_priority,
                       :enable_in, :disable_in
 
         def initialize(service_alias)
           @alias = service_alias
           @name = nil
-          @hostmask = nil
+          @vulnbox_endpoint_code = nil
           @checker_endpoint = nil
           @attack_priority = false
         end
@@ -35,8 +36,8 @@ module VolgaCTF
           @service.name = name
         end
 
-        def hostmask(hostmask)
-          @service.hostmask = hostmask
+        def vulnbox_endpoint_code(vulnbox_endpoint_code)
+          @service.vulnbox_endpoint_code = vulnbox_endpoint_code
         end
 
         def checker_endpoint(checker_endpoint)
