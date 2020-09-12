@@ -18,6 +18,12 @@ module VolgaCTF
             logo_hash: logo_hash
           }
         end
+
+        dataset_module do
+          def ordered
+            order(:id)
+          end
+        end
       end
     end
   end

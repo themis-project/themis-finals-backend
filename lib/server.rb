@@ -110,7 +110,7 @@ module VolgaCTF
         end
 
         get '/api/teams' do
-          json ::VolgaCTF::Final::Model::Team.map { |t| t.serialize }
+          json ::VolgaCTF::Final::Model::Team.ordered.map { |t| t.serialize }
         end
 
         get '/api/services' do
