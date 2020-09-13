@@ -2,6 +2,7 @@ require 'date'
 
 require './lib/controller/round'
 require './lib/controller/team_service_state'
+require './lib/controller/scoreboard'
 require './lib/util/event_emitter'
 require './lib/const/submit_result'
 require './lib/controller/domain'
@@ -14,6 +15,7 @@ module VolgaCTF
           @domain_ctrl = ::VolgaCTF::Final::Controller::Domain.new
           @team_service_state_ctrl = ::VolgaCTF::Final::Controller::TeamServiceState.new
           @round_ctrl = ::VolgaCTF::Final::Controller::Round.new
+          @scoreboard_ctrl = ::VolgaCTF::Final::Controller::Scoreboard.new
         end
 
         def handle(stage, team, data)
@@ -112,12 +114,17 @@ module VolgaCTF
 
               r = ::VolgaCTF::Final::Const::SubmitResult::SUCCESS
 
-              ::VolgaCTF::Final::Util::EventEmitter.emit_log(
-                4,
+              log_data = {
                 actor_team_id: team.id,
                 target_team_id: flag.team_id,
                 target_service_id: flag.service_id
-              )
+              }
+
+              if @scoreboard_ctrl.broadcast?
+                ::VolgaCTF::Final::Util::EventEmitter.broadcast_log(4, log_data)
+              else
+                ::VolgaCTF::Final::Util::EventEmitter.emit_log(4, log_data)
+              end
             end
           rescue ::Sequel::UniqueConstraintViolation => e
             r = ::VolgaCTF::Final::Const::SubmitResult::ERROR_FLAG_SUBMITTED

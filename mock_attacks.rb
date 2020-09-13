@@ -12,14 +12,14 @@ $total_services = ::VolgaCTF::Final::Model::Service.count
 
 logger = ::VolgaCTF::Final::Util::Logger.get
 
-def fake_state_change(event_id)
+def fake_state_change(event_name)
   ::Range.new(1, $total_teams).to_a.shuffle.each do |team_id|
     ::Range.new(1, $total_services).to_a.shuffle.each do |service_id|
-      ::VolgaCTF::Final::Util::EventEmitter.emit_log(
-        31,
+      ::VolgaCTF::Final::Util::EventEmitter.broadcast(
+        event_name,
         team_id: team_id,
         service_id: service_id,
-        state: ::Random.rand(::Range.new(0, 1))
+        state: ::Random.rand(::Range.new(1, 4))
       )
     end
   end
@@ -35,7 +35,7 @@ def fake_attacks
         target_id = ::Random.rand(::Range.new(1, $total_teams))
       end
 
-      ::VolgaCTF::Final::Util::EventEmitter.emit_log(
+      ::VolgaCTF::Final::Util::EventEmitter.broadcast_log(
         4,
         actor_team_id: actor_id,
         target_team_id: target_id,
@@ -48,11 +48,11 @@ end
   logger.info('Scheduler started, CTRL+C to stop')
 
   ::EM.add_periodic_timer 20 do
-    fake_state_change(31)
+    fake_state_change('team/service/push-state')
   end
 
   ::EM.add_periodic_timer 10 do
-    fake_state_change(32)
+    fake_state_change('team/service/pull-state')
   end
 
   ::EM.add_periodic_timer 5 do

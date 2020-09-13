@@ -99,14 +99,6 @@ module VolgaCTF
               partial_event_data,
               team_data
             )
-
-            ::VolgaCTF::Final::Util::EventEmitter.emit_log(
-              31,
-              team_id: team_service_state.team_id,
-              service_id: team_service_state.service_id,
-              state: team_service_state.state,
-              message: team_service_state.message
-            )
           end
         end
 
@@ -174,14 +166,6 @@ module VolgaCTF
               nil,
               partial_event_data,
               team_data
-            )
-
-            ::VolgaCTF::Final::Util::EventEmitter.emit_log(
-              32,
-              team_id: team_service_state.team_id,
-              service_id: team_service_state.service_id,
-              state: team_service_state.state,
-              message: team_service_state.message
             )
           end
         end

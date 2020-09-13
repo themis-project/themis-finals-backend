@@ -53,6 +53,10 @@ module VolgaCTF
         def self.emit_log(type, params)
           emit('log', { type: type, params: params }, nil, nil)
         end
+
+        def self.broadcast_log(type, params)
+          broadcast('log', { type: type, params: params})
+        end
       end
     end
   end
